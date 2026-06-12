@@ -1,0 +1,12 @@
+{
+  "name": "medassist",
+  "version": "1.0.0",
+  "description": "MedAssist - Health Identity Platform",
+  "main": "index.html",
+  "scripts": {
+    "dev": "vite --open"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}

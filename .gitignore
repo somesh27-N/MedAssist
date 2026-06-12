@@ -1,0 +1,5 @@
+node_modules/
+temp_debug.jsx
+*.log
+.tempmediaStorage/
+package-lock.json
