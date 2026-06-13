@@ -4,3 +4,4 @@ temp_debug.jsx
 .tempmediaStorage/
 package-lock.json
 .env
+dist/
