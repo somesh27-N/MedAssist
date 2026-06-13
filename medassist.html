@@ -82,6 +82,109 @@ body{font-family:'Inter',sans-serif}
 
 .toggle-thumb{position:absolute;top:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,0.2)}
 
+/* Premium Dark Theme Overrides */
+body {
+  background-color: #071120 !important;
+  color: #ffffff !important;
+}
+
+/* App Container and Main panel */
+.bg-gray-100 {
+  background-color: #071120 !important;
+}
+
+/* Topbar override */
+header {
+  background-color: #0A1628 !important;
+  border-bottom-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+/* Card styling - Dark Glassmorphism */
+.card {
+  background: #111E33 !important;
+  border-color: rgba(255, 255, 255, 0.06) !important;
+  box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Card divider borders */
+.divide-gray-50 > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgba(255, 255, 255, 0.06) !important;
+}
+.border-gray-50 {
+  border-color: rgba(255, 255, 255, 0.04) !important;
+}
+.border-gray-100 {
+  border-color: rgba(255, 255, 255, 0.06) !important;
+}
+.border-gray-200 {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Text color corrections */
+.text-navy-600 {
+  color: #f3f4f6 !important;
+}
+.text-gray-400 {
+  color: rgba(255, 255, 255, 0.4) !important;
+}
+.text-gray-500 {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+.text-gray-300 {
+  color: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Background helper corrections */
+.bg-gray-50 {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+}
+.bg-white {
+  background-color: #111E33 !important;
+}
+
+/* List hover effects */
+.hover\:bg-gray-50:hover {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+.hover\:bg-gray-50\/50:hover {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+}
+
+/* Forms input elements styling */
+input:not(.input-field) {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
+}
+input:not(.input-field):focus {
+  border-color: rgba(0, 184, 169, 0.5) !important;
+}
+
+/* Emergency contacts boxes overlay */
+div[style*="background:#FFFBF0"], 
+div[style*="background: rgb(255, 251, 240)"] {
+  background: rgba(245, 158, 11, 0.08) !important;
+  border-color: rgba(245, 158, 11, 0.18) !important;
+}
+
+/* Ayushman / private insurance rows text correction */
+.text-green-600 {
+  color: #34d399 !important; /* Brighter green for dark mode */
+}
+.text-emerald-400 {
+  color: #34d399 !important;
+}
+.text-amber-600 {
+  color: #fbbf24 !important; /* Brighter amber */
+}
+
+/* Topbar verified dot ring */
+span.w-2.h-2.bg-emerald-400 {
+  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.15) !important;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb{background:rgba(0,184,169,0.3);border-radius:999px}
+
 </style>
 
 </head>
@@ -216,15 +319,65 @@ function AppProvider({children}) {
 
   const [view, setView] = useState('dashboard');
 
+  const [permissions, setPermissions] = useState({
+    'Kapoor': { id: 'Kapoor', name: 'Dr. S. Kapoor', hospital: 'AIIMS New Delhi', status: 'authorized' },
+    'Mehta': { id: 'Mehta', name: 'Dr. R. Mehta', hospital: 'City Hospital Delhi', status: 'authorized' },
+    'Joshi': { id: 'Joshi', name: 'Dr. Anand Joshi', hospital: 'AIIMS New Delhi', status: 'authorized' }
+  });
+
+  const [accessLogs, setAccessLogs] = useState([
+    { id: 1, viewer: 'Dr. S. Kapoor (AIIMS)', time: '12 Jun 2026, 10:24 AM', method: 'QR Scan', status: 'Success', reason: 'Routine Diabetes Follow-up' },
+    { id: 2, viewer: 'Apollo Hospital (ER)', time: '10 Jun 2026, 11:05 PM', method: 'Biometric Scan', status: 'Success', reason: 'Emergency Override (Accident)' },
+    { id: 3, viewer: 'Dr. R. Mehta (City Hospital)', time: '08 Jun 2026, 02:15 PM', method: 'UID + OTP', status: 'Success', reason: 'BP Prescription Update' },
+    { id: 4, viewer: 'Dr. S. Kapoor (AIIMS)', time: '05 Jun 2026, 09:45 AM', method: 'QR Scan', status: 'Blocked', reason: 'Routine Checkup (Attempted)' }
+  ]);
+
+  const [activePatientSession, setActivePatientSession] = useState(null);
+
+  const togglePermission = (id) => {
+    setPermissions(prev => ({
+      ...prev,
+      [id]: {
+        ...prev[id],
+        status: prev[id].status === 'authorized' ? 'blocked' : 'authorized'
+      }
+    }));
+  };
+
+  const addAccessLog = (log) => {
+    setAccessLogs(prev => [
+      ...prev,
+      {
+        id: prev.length + 1,
+        ...log
+      }
+    ]);
+  };
+
   return (
 
     <AppCtx.Provider value={{
 
       user, view, setView,
 
-      login:(role,data)=>setUser({role,...data}),
+      login:(role,data)=>{
+        setUser({role,...data});
+        setView(role === 'doctor' ? 'doctor_view' : 'dashboard');
+        setActivePatientSession(null);
+      },
 
-      logout:()=>{setUser(null);setView('dashboard')}
+      logout:()=>{
+        setUser(null);
+        setView('dashboard');
+        setActivePatientSession(null);
+      },
+
+      permissions,
+      accessLogs,
+      activePatientSession,
+      setActivePatientSession,
+      togglePermission,
+      addAccessLog
 
     }}>
 
@@ -380,32 +533,129 @@ function LoginScreen() {
 
   const [loading,setLoading] = useState(false);
 
+  // Signup states
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [googleConnected, setGoogleConnected] = useState(false);
 
+  // Citizen signup inputs
+  const [citizenName, setCitizenName] = useState('');
+  const [citizenPhone, setCitizenPhone] = useState('');
+  const [citizenEmail, setCitizenEmail] = useState('');
+  const [citizenAadhaar, setCitizenAadhaar] = useState('');
+  const [citizenOtp, setCitizenOtp] = useState('');
 
-  const doLogin = () => {
+  // Doctor signup inputs
+  const [doctorName, setDoctorName] = useState('');
+  const [doctorPhone, setDoctorPhone] = useState('');
+  const [doctorEmail, setDoctorEmail] = useState('');
+  const [doctorLicense, setDoctorLicense] = useState('');
+  const [doctorHospital, setDoctorHospital] = useState('');
+  const [doctorPassword, setDoctorPassword] = useState('');
 
+  // Login inputs
+  const [loginAadhaar, setLoginAadhaar] = useState('');
+  const [loginPhone, setLoginPhone] = useState('');
+  const [loginOtp, setLoginOtp] = useState('');
+  const [loginLicense, setLoginLicense] = useState('');
+  const [loginHospital, setLoginHospital] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+
+  const handleGoogleConnect = () => {
     setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      setGoogleConnected(true);
+      if (portal === 'doctor') {
+        setDoctorName('Dr. Anand Joshi');
+        setDoctorEmail('dr.anand.joshi@gmail.com');
+      } else {
+        setCitizenName('Rahul Sharma');
+        setCitizenEmail('rahul.sharma@gmail.com');
+      }
+    }, 800);
+  };
 
-    setTimeout(()=>{ setLoading(false); login(portal==='doctor'?'doctor':'user', PATIENT); }, 1100);
+  const doSubmit = () => {
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      if (portal === 'hospital') {
+        login('user', PATIENT);
+        return;
+      }
 
+      if (isSignUp) {
+        if (portal === 'doctor') {
+          const docData = {
+            ...PATIENT,
+            name: doctorName || 'Dr. Anand Joshi',
+            phone: doctorPhone || '+91 98100 XXXXX',
+            email: doctorEmail || 'dr.anand.joshi@gmail.com',
+            uid: doctorLicense || 'MCI-DL-9938102',
+            hospital: doctorHospital || 'AIIMS New Delhi'
+          };
+          login('doctor', docData);
+        } else {
+          const patData = {
+            ...PATIENT,
+            name: citizenName || 'Rahul Sharma',
+            phone: citizenPhone || '+91 98100 XXXXX',
+            email: citizenEmail || 'rahul.sharma@gmail.com',
+            uid: citizenAadhaar ? `${citizenAadhaar.slice(0,4)}-XXXX-${citizenAadhaar.slice(-4)}` : '7823-XXXX-4401'
+          };
+          login('user', patData);
+        }
+      } else {
+        // Sign In
+        if (portal === 'doctor') {
+          const docData = {
+            ...PATIENT,
+            name: 'Dr. S. Kapoor',
+            uid: loginLicense || 'MCI-DL-8829103',
+            hospital: loginHospital || 'AIIMS New Delhi'
+          };
+          login('doctor', docData);
+        } else {
+          const patData = {
+            ...PATIENT,
+            phone: loginPhone || PATIENT.phone,
+            uid: loginAadhaar ? `${loginAadhaar.slice(0,4)}-XXXX-${loginAadhaar.slice(-4)}` : PATIENT.uid
+          };
+          login('user', patData);
+        }
+      }
+    }, 1100);
   };
 
 
 
   return (
 
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 animate-fade-in"
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 animate-fade-in relative overflow-hidden"
 
       style={{background:'radial-gradient(ellipse at 60% 0%, #0d2040 0%, #0A1628 60%)'}}>
 
-            <div className="mb-6 text-center flex flex-col items-center">
+      {/* Video Background (Screen Size Frame) */}
+      <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-0">
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="w-full h-full object-cover opacity-60"
+          src="https://www.nmbioscience.org/wp-content/uploads/2020/07/DNA-Helix.mp4"></video>
+        {/* Dark overlay to ensure text contrast */}
+        <div className="absolute inset-0 bg-navy-900/60 backdrop-blur-[1px]" />
+      </div>
+
+      <div className="mb-6 text-center flex flex-col items-center z-10">
         <img src="/logo.png" alt="MedAssist Logo" className="h-32 w-auto object-contain mb-3" />
         <p className="text-white/40 text-sm tracking-wide">Your complete health identity</p>
       </div>
 
 
 
-      <div className="w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl animate-slide-up" style={{background:'#111E33',border:'1px solid rgba(255,255,255,0.07)'}}>
+      <div className="w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl animate-slide-up z-10" style={{background:'#111E33',border:'1px solid rgba(255,255,255,0.07)'}}>
 
         {/* Portal tabs */}
 
@@ -413,7 +663,7 @@ function LoginScreen() {
 
           {[['user','Citizen','ti-user'],['doctor','Doctor','ti-stethoscope'],['hospital','Hospital','ti-building-hospital']].map(([id,label,ic])=>(
 
-            <button key={id} onClick={()=>setPortal(id)}
+            <button key={id} onClick={()=>{ setPortal(id); setGoogleConnected(false); }}
 
               className="flex-1 py-3 flex flex-col items-center gap-1 text-xs cursor-pointer border-none transition-all duration-150"
 
@@ -435,83 +685,165 @@ function LoginScreen() {
 
         <div className="p-6">
 
-          {portal!=='doctor' ? (
 
-            <>
 
-              <div className="mb-4">
-
-                <p className="text-white/40 text-xs uppercase tracking-widest mb-2">Verify via</p>
-
-                <div className="flex gap-2">
-
-                  {['Aadhaar','Retina','Phone'].map(m=>(
-
-                    <button key={m} onClick={()=>setMethod(m)}
-
-                      className="flex-1 py-2 rounded-lg text-xs cursor-pointer transition-all"
-
-                      style={{border:method===m?'1px solid rgba(77,210,204,0.5)':'1px solid rgba(255,255,255,0.1)',
-
-                        background:method===m?'rgba(0,184,169,0.1)':'transparent',
-
-                        color:method===m?'#4DD2CC':'rgba(255,255,255,0.4)'}}>
-
-                      {m}
-
-                    </button>
-
-                  ))}
-
+          {portal === 'hospital' ? (
+            isSignUp ? (
+              <div className="py-6 text-center text-white/50 space-y-3">
+                <i className="ti ti-building-hospital text-4xl text-teal-500/40 block"/>
+                <p className="text-xs uppercase tracking-wider font-semibold text-white/80">Hospital Registration</p>
+                <p className="text-[11px] max-w-xs mx-auto leading-relaxed">Hospital profiles require offline credentials and NHA authority verification. Please contact support to register your hospital.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="mb-4">
+                  <label className="block text-white/40 text-xs uppercase tracking-widest mb-1.5">Hospital ID</label>
+                  <input className="input-field" placeholder="HOSP-XXXXXXXX"/>
                 </div>
-
+                <div className="mb-5">
+                  <label className="block text-white/40 text-xs uppercase tracking-widest mb-1.5">Password</label>
+                  <input type="password" className="input-field" placeholder="Secure password"/>
+                </div>
               </div>
-
-              <div className="mb-4">
-
-                <label className="block text-white/40 text-xs uppercase tracking-widest mb-1.5">
-
-                  {method==='Aadhaar'?'Aadhaar number':method==='Phone'?'Phone number':'Scan retina'}
-
-                </label>
-
-                <input className="input-field" placeholder={method==='Aadhaar'?'XXXX XXXX XXXX':method==='Phone'?'+91 XXXXX XXXXX':'Position eyes for scan'}/>
-
+            )
+          ) : portal === 'doctor' ? (
+            isSignUp ? (
+              // Doctor Sign Up
+              <div className="space-y-4 animate-fade-in">
+                <div>
+                  <label className="block text-white/40 text-xs uppercase tracking-widest mb-1.5">Full Name</label>
+                  <input className="input-field" value={doctorName} onChange={e=>setDoctorName(e.target.value)} placeholder="e.g. Dr. Anand Joshi"/>
+                </div>
+                <div>
+                  <label className="block text-white/40 text-xs uppercase tracking-widest mb-1.5">Phone Number</label>
+                  <input className="input-field" value={doctorPhone} onChange={e=>setDoctorPhone(e.target.value)} placeholder="+91 XXXXX XXXXX"/>
+                </div>
+                <div>
+                  <label className="block text-white/40 text-xs uppercase tracking-widest mb-1.5">Google Email ID</label>
+                  <input className="input-field" type="email" value={doctorEmail} onChange={e=>setDoctorEmail(e.target.value)} placeholder="e.g. dr.anand@gmail.com"/>
+                </div>
+                <div>
+                  <label className="block text-white/40 text-xs uppercase tracking-widest mb-1.5">MCI Licence ID</label>
+                  <input className="input-field" value={doctorLicense} onChange={e=>setDoctorLicense(e.target.value)} placeholder="MCI-DL-XXXXXXXX"/>
+                </div>
+                <div>
+                  <label className="block text-white/40 text-xs uppercase tracking-widest mb-1.5">Hospital</label>
+                  <input className="input-field" value={doctorHospital} onChange={e=>setDoctorHospital(e.target.value)} placeholder="e.g. AIIMS New Delhi"/>
+                </div>
+                <div className="mb-5">
+                  <label className="block text-white/40 text-xs uppercase tracking-widest mb-1.5">Password</label>
+                  <input type="password" className="input-field" value={doctorPassword} onChange={e=>setDoctorPassword(e.target.value)} placeholder="Secure password"/>
+                </div>
               </div>
-
-              <div className="mb-5">
-
-                <label className="block text-white/40 text-xs uppercase tracking-widest mb-1.5">OTP / PIN</label>
-
-                <input type="password" className="input-field" placeholder="Enter OTP sent to mobile"/>
-
+            ) : (
+              // Doctor Login
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-white/40 text-xs uppercase tracking-widest mb-1.5">MCI Licence ID</label>
+                  <input className="input-field" value={loginLicense} onChange={e=>setLoginLicense(e.target.value)} placeholder="MCI-DL-XXXXXXXX"/>
+                </div>
+                <div>
+                  <label className="block text-white/40 text-xs uppercase tracking-widest mb-1.5">Hospital</label>
+                  <input className="input-field" value={loginHospital} onChange={e=>setLoginHospital(e.target.value)} placeholder="e.g. AIIMS New Delhi"/>
+                </div>
+                <div className="mb-5">
+                  <label className="block text-white/40 text-xs uppercase tracking-widest mb-1.5">Password</label>
+                  <input type="password" className="input-field" value={loginPassword} onChange={e=>setLoginPassword(e.target.value)} placeholder="Secure password"/>
+                </div>
               </div>
-
-            </>
-
+            )
           ) : (
-
-            <>
-
-              <div className="mb-4"><label className="block text-white/40 text-xs uppercase tracking-widest mb-1.5">MCI Licence ID</label><input className="input-field" placeholder="MCI-DL-XXXXXXXX"/></div>
-
-              <div className="mb-4"><label className="block text-white/40 text-xs uppercase tracking-widest mb-1.5">Hospital</label><input className="input-field" placeholder="e.g. AIIMS New Delhi"/></div>
-
-              <div className="mb-5"><label className="block text-white/40 text-xs uppercase tracking-widest mb-1.5">Password</label><input type="password" className="input-field" placeholder="Secure password"/></div>
-
-            </>
-
+            // Citizen (Patient) Portal
+            isSignUp ? (
+              // Citizen Sign Up
+              <div className="space-y-4 animate-fade-in">
+                <div>
+                  <label className="block text-white/40 text-xs uppercase tracking-widest mb-1.5">Full Name</label>
+                  <input className="input-field" value={citizenName} onChange={e=>setCitizenName(e.target.value)} placeholder="e.g. Rahul Sharma"/>
+                </div>
+                <div>
+                  <label className="block text-white/40 text-xs uppercase tracking-widest mb-1.5">Phone number</label>
+                  <input className="input-field" value={citizenPhone} onChange={e=>setCitizenPhone(e.target.value)} placeholder="+91 XXXXX XXXXX"/>
+                </div>
+                <div>
+                  <label className="block text-white/40 text-xs uppercase tracking-widest mb-1.5">Google Email ID</label>
+                  <input className="input-field" type="email" value={citizenEmail} onChange={e=>setCitizenEmail(e.target.value)} placeholder="e.g. rahul@gmail.com"/>
+                </div>
+                <div>
+                  <label className="block text-white/40 text-xs uppercase tracking-widest mb-1.5">Aadhaar number</label>
+                  <input className="input-field" value={citizenAadhaar} onChange={e=>setCitizenAadhaar(e.target.value)} placeholder="XXXX XXXX XXXX"/>
+                </div>
+                <div className="mb-5">
+                  <label className="block text-white/40 text-xs uppercase tracking-widest mb-1.5">OTP / PIN</label>
+                  <input type="password" className="input-field" value={citizenOtp} onChange={e=>setCitizenOtp(e.target.value)} placeholder="Enter OTP sent to mobile"/>
+                </div>
+              </div>
+            ) : (
+              // Citizen Login
+              <div className="space-y-4">
+                <div>
+                  <p className="text-white/40 text-xs uppercase tracking-widest mb-2">Verify via</p>
+                  <div className="flex gap-2">
+                    {['Aadhaar','Retina','Phone'].map(m=>(
+                      <button key={m} onClick={()=>setMethod(m)}
+                        className="flex-1 py-2 rounded-lg text-xs cursor-pointer transition-all"
+                        style={{border:method===m?'1px solid rgba(77,210,204,0.5)':'1px solid rgba(255,255,255,0.1)',
+                          background:method===m?'rgba(0,184,169,0.1)':'transparent',
+                          color:method===m?'#4DD2CC':'rgba(255,255,255,0.4)'}}>
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {method === 'Phone' ? (
+                  <div>
+                    <label className="block text-white/40 text-xs uppercase tracking-widest mb-1.5">Phone number</label>
+                    <input className="input-field" value={loginPhone} onChange={e=>setLoginPhone(e.target.value)} placeholder="+91 XXXXX XXXXX"/>
+                  </div>
+                ) : method === 'Aadhaar' ? (
+                  <div>
+                    <label className="block text-white/40 text-xs uppercase tracking-widest mb-1.5">Aadhaar number</label>
+                    <input className="input-field" value={loginAadhaar} onChange={e=>setLoginAadhaar(e.target.value)} placeholder="XXXX XXXX XXXX"/>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-white/40 text-xs uppercase tracking-widest mb-1.5">Scan retina</label>
+                    <input className="input-field" readOnly placeholder="Position eyes for scan"/>
+                  </div>
+                )}
+                <div className="mb-5">
+                  <label className="block text-white/40 text-xs uppercase tracking-widest mb-1.5">OTP / PIN</label>
+                  <input type="password" className="input-field" value={loginOtp} onChange={e=>setLoginOtp(e.target.value)} placeholder="Enter OTP sent to mobile"/>
+                </div>
+              </div>
+            )
           )}
 
-          <button onClick={doLogin} disabled={loading} className="btn-primary" style={{opacity:loading?0.7:1}}>
+          {!(portal === 'hospital' && isSignUp) && (
+            <button onClick={doSubmit} disabled={loading} className="btn-primary mt-2 cursor-pointer" style={{opacity:loading?0.7:1}}>
+              {loading
+                ? <><span className="inline-block w-4 h-4 border-2 rounded-full" style={{borderColor:'rgba(255,255,255,0.3)',borderTopColor:'white',animation:'spin 1s linear infinite'}}/>{isSignUp ? 'Registering…' : 'Verifying…'}</>
+                : <>{isSignUp ? 'Create Account & Sign in' : 'Verify & Sign in'} <i className="ti ti-arrow-right text-sm"/></>}
+            </button>
+          )}
 
-            {loading
-
-              ? <><span className="inline-block w-4 h-4 border-2 rounded-full" style={{borderColor:'rgba(255,255,255,0.3)',borderTopColor:'white',animation:'spin 1s linear infinite'}}/>Verifying…</>
-
-              : <>Verify &amp; Sign in <i className="ti ti-arrow-right text-sm"/></>}
-
-          </button>
+          <div className="mt-5 text-center">
+            {isSignUp ? (
+              <p className="text-xs text-white/45">
+                Already have an account?{' '}
+                <button onClick={() => { setIsSignUp(false); setGoogleConnected(false); }} className="text-teal-400 hover:text-teal-300 font-semibold underline bg-transparent border-none cursor-pointer">
+                  Sign in
+                </button>
+              </p>
+            ) : (
+              <p className="text-xs text-white/45">
+                Don't have an account?{' '}
+                <button onClick={() => { setIsSignUp(true); setGoogleConnected(false); }} className="text-teal-400 hover:text-teal-300 font-semibold underline bg-transparent border-none cursor-pointer">
+                  Sign up
+                </button>
+              </p>
+            )}
+          </div>
 
         </div>
 
@@ -533,7 +865,7 @@ function LoginScreen() {
 
       <button onClick={()=>login('user',PATIENT)}
 
-        className="mt-5 text-xs underline cursor-pointer bg-transparent border-none transition-colors hover:opacity-60"
+        className="mt-5 text-xs underline cursor-pointer bg-transparent border-none transition-colors hover:opacity-60 z-10"
 
         style={{color:'rgba(255,255,255,0.25)'}}>
 
@@ -573,6 +905,8 @@ const USER_NAV = [
 
   {id:'identity',label:'Personal identity',icon:'ti-id'},
 
+  {id:'access_control',label:'Access control & logs',icon:'ti-lock'},
+
   {s:'Portals'},{id:'doctor_view',label:'Doctor portal',icon:'ti-stethoscope'},
 
 ];
@@ -604,9 +938,9 @@ function Sidebar() {
 
         <div className="min-w-0">
 
-          <p className="text-[10px] leading-none mb-0.5" style={{color:'rgba(255,255,255,0.4)'}}>Citizen</p>
+          <p className="text-[10px] leading-none mb-0.5" style={{color:'rgba(255,255,255,0.4)'}}>{user?.role === 'doctor' ? 'Doctor' : 'Citizen'}</p>
 
-          <p className="text-sm text-white font-medium leading-none truncate">{user?.name?.split(' ')[0]}</p>
+          <p className="text-sm text-white font-medium leading-none truncate">{user?.role === 'doctor' ? user.name : user?.name?.split(' ')[0]}</p>
 
         </div>
 
@@ -616,7 +950,15 @@ function Sidebar() {
 
       <nav className="flex-1 overflow-y-auto scrollbar-thin px-2 py-2 mt-1">
 
-        {USER_NAV.map((item,i)=>{
+        {USER_NAV.filter(item => {
+          if (user?.role !== 'doctor' && (item.id === 'doctor_view' || item.s === 'Portals')) {
+            return false;
+          }
+          if (user?.role === 'doctor' && item.id === 'access_control') {
+            return false;
+          }
+          return true;
+        }).map((item,i)=>{
 
           if(item.s) return <p key={i} className="text-[9px] uppercase tracking-[1.8px] font-medium px-3 pt-4 pb-1 first:pt-2" style={{color:'rgba(255,255,255,0.22)'}}>{item.s}</p>;
 
@@ -642,7 +984,7 @@ function Sidebar() {
 
       <div className="p-3 flex-shrink-0 space-y-2" style={{borderTop:'1px solid rgba(255,255,255,0.07)'}}>
 
-        <div className="rounded-lg p-2.5 text-center cursor-pointer transition-colors" style={{background:'rgba(0,184,169,0.07)',border:'1px solid rgba(0,184,169,0.18)'}}>
+        <div onClick={()=>setView('identity')} className="rounded-lg p-2.5 text-center cursor-pointer transition-colors hover:bg-teal-500/10" style={{background:'rgba(0,184,169,0.07)',border:'1px solid rgba(0,184,169,0.18)'}}>
 
           <i className="ti ti-qrcode text-teal-400 text-2xl block"/>
 
@@ -693,6 +1035,8 @@ const VIEW_TITLES = {
   emergency:{title:'Emergency Contacts',sub:'People to reach in a crisis'},
 
   identity:{title:'Personal Identity',sub:'DNR, organ donation & more'},
+
+  access_control:{title:'Access Control & Audit Logs',sub:'Manage record permissions & view access history'},
 
   doctor_view:{title:'Doctor Portal',sub:'Authenticated clinical view'},
 
@@ -1266,7 +1610,7 @@ function ReportsView() {
 
         <p className="text-sm font-medium text-gray-400">Drop files here or click to upload</p>
 
-        <p className="text-xs text-gray-300 mt-1">PDF, DICOM, JPG, PNG up to 50MB</p>
+        <p className="text-xs text-gray-300 mt-1">PDF, DICOM, JPG, PNG up to 1MB</p>
 
       </div>
 
@@ -1376,7 +1720,90 @@ function EmergencyView() {
 
 }
 
+function AccessControlView() {
+  const { permissions, togglePermission, accessLogs } = useApp();
 
+  return (
+    <div className="flex flex-col gap-6 animate-fade-in">
+      <div className="grid md:grid-cols-3 gap-5">
+        <div className="md:col-span-1 flex flex-col gap-5">
+          <Card noPad>
+            <CardHeader title="Access Permissions Manager" icon="ti-lock" />
+            <div className="p-5 space-y-4">
+              <p className="text-xs text-gray-400 leading-relaxed mb-2">
+                Configure who can access your medical records. Any blocked doctor or hospital will be denied access in real-time.
+              </p>
+              <div className="divide-y divide-gray-50/10">
+                {Object.values(permissions).map((perm) => (
+                  <div key={perm.id} className="flex items-center justify-between py-3">
+                    <div className="min-w-0 pr-2 text-left">
+                      <p className="text-sm font-medium text-white truncate">{perm.name}</p>
+                      <p className="text-xs text-gray-400 truncate">{perm.hospital}</p>
+                    </div>
+                    <button
+                      onClick={() => togglePermission(perm.id)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border transition-all ${
+                        perm.status === 'authorized'
+                          ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
+                          : 'border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500/20'
+                      }`}
+                    >
+                      {perm.status === 'authorized' ? 'Authorized' : 'Blocked'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        <div className="md:col-span-2">
+          <Card noPad>
+            <CardHeader title="Access Audit Logs" icon="ti-history" />
+            <div className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-gray-50/10 text-gray-400 uppercase tracking-wider bg-white/5">
+                      <th className="px-5 py-3">Viewer</th>
+                      <th className="px-5 py-3">Time</th>
+                      <th className="px-5 py-3">Method</th>
+                      <th className="px-5 py-3">Status</th>
+                      <th className="px-5 py-3">Reason</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50/10">
+                    {accessLogs.slice().reverse().map((log) => (
+                      <tr key={log.id} className="hover:bg-white/5 transition-colors">
+                        <td className="px-5 py-3.5 font-medium text-white">{log.viewer}</td>
+                        <td className="px-5 py-3.5 text-gray-400">{log.time}</td>
+                        <td className="px-5 py-3.5 text-gray-400">{log.method}</td>
+                        <td className="px-5 py-3.5">
+                          <Badge
+                            variant={
+                              log.status === 'Success'
+                                ? 'green'
+                                : log.status.includes('Approved')
+                                ? 'purple'
+                                : 'red'
+                            }
+                          >
+                            {log.status}
+                          </Badge>
+                        </td>
+                        <td className="px-5 py-3.5 text-gray-400">{log.reason}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function IdentityView() {
 
@@ -1479,13 +1906,16 @@ function IdentityView() {
       <Card noPad>
 
         <CardHeader title="QR authentication code" icon="ti-qrcode"/>
-
         <div className="px-5 py-5 flex items-center gap-6">
 
-          <div className="w-24 h-24 bg-navy-600 rounded-xl flex items-center justify-center flex-shrink-0">
-
-            <i className="ti ti-qrcode text-white text-5xl"/>
-
+          <div className="w-24 h-24 bg-white rounded-xl flex items-center justify-center flex-shrink-0 p-1 border border-gray-100/10">
+            <img 
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&color=0a1628&data=${encodeURIComponent(
+                `Name: ${user.name}\nUID: ${user.uid}\nPhone: ${user.phone}\nBlood: ${user.bloodGroup}\nDOB: ${user.dob}`
+              )}`} 
+              alt="Health QR Code" 
+              className="w-full h-full object-contain" 
+            />
           </div>
 
           <div>
@@ -1517,247 +1947,566 @@ function IdentityView() {
 
 
 function DoctorView() {
+  const { user, activePatientSession, setActivePatientSession, permissions, addAccessLog } = useApp();
+  const [step, setStep] = useState(activePatientSession ? 'patient_dashboard' : 'verify_license');
+  const [licenseId, setLicenseId] = useState(user?.uid || 'MCI-DL-9938102');
+  const [verifyingLicense, setVerifyingLicense] = useState(false);
+  const [patientUid, setPatientUid] = useState('7823-XXXX-4401');
+  const [accessReason, setAccessReason] = useState('Routine Checkup');
+  const [otp, setOtp] = useState('');
+  const [requestingAccess, setRequestingAccess] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [biometricScanning, setBiometricScanning] = useState(false);
+  const [biometricProgress, setBiometricProgress] = useState(0);
+  const [countdown, setCountdown] = useState(30);
+  const [overrideUnlocked, setOverrideUnlocked] = useState(false);
+  const [tab, setTab] = useState(0);
 
-  const {user} = useApp();
+  // Auto-set step if patient session is active
+  React.useEffect(() => {
+    if (activePatientSession) {
+      setStep('patient_dashboard');
+      if (activePatientSession.mode === 'emergency') {
+        setOverrideUnlocked(true);
+      }
+    } else {
+      setStep('verify_license');
+    }
+  }, [activePatientSession]);
 
-  const [tab,setTab] = useState(0);
+  // Handle countdown for emergency summary
+  React.useEffect(() => {
+    if (step !== 'emergency_summary') return;
+    if (countdown <= 0) {
+      addAccessLog({
+        viewer: `${user.name} (${user.hospital})`,
+        time: new Date().toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+        method: 'Biometric Scan',
+        status: 'Timeout',
+        reason: 'Emergency Access Expired (30s limit)'
+      });
+      setErrorMsg('Emergency access window expired. Access has been locked.');
+      setStep('request_access');
+      return;
+    }
+    const timer = setTimeout(() => {
+      setCountdown(countdown - 1);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [countdown, step]);
 
-  const TABS = ['Emergency summary','Full record','Blood bank','Lab reports'];
+  const handleVerifyLicense = () => {
+    setVerifyingLicense(true);
+    setErrorMsg('');
+    setTimeout(() => {
+      setVerifyingLicense(false);
+      setStep('request_access');
+    }, 1200);
+  };
+
+  const handleRequestAccess = () => {
+    setErrorMsg('');
+    if (accessReason === 'Emergency') {
+      setStep('emergency_biometric');
+      return;
+    }
+
+    if (!otp) {
+      setErrorMsg('Please enter the patient OTP.');
+      return;
+    }
+
+    setRequestingAccess(true);
+    setTimeout(() => {
+      setRequestingAccess(false);
+      const docKey = user.name.includes('Kapoor') ? 'Kapoor' : user.name.includes('Mehta') ? 'Mehta' : 'Joshi';
+      const isBlocked = permissions[docKey]?.status === 'blocked';
+
+      const logTime = new Date().toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+      if (isBlocked) {
+        addAccessLog({
+          viewer: `${user.name} (${user.hospital})`,
+          time: logTime,
+          method: 'UID Search',
+          status: 'Blocked',
+          reason: `${accessReason} (Attempted)`
+        });
+        setErrorMsg('Access Denied: You have been blocked by the patient.');
+        return;
+      }
+
+      if (otp !== '4401') {
+        addAccessLog({
+          viewer: `${user.name} (${user.hospital})`,
+          time: logTime,
+          method: 'UID Search',
+          status: 'Failed',
+          reason: `${accessReason} (Invalid OTP)`
+        });
+        setErrorMsg('Access Denied: Invalid OTP Code.');
+        return;
+      }
+
+      // Successful Access
+      addAccessLog({
+        viewer: `${user.name} (${user.hospital})`,
+        time: logTime,
+        method: 'UID + OTP',
+        status: 'Success',
+        reason: accessReason
+      });
+      setActivePatientSession({ patient: PATIENT, mode: 'normal' });
+    }, 1000);
+  };
+
+  const handleStartBiometricScan = () => {
+    setBiometricScanning(true);
+    setBiometricProgress(0);
+    const interval = setInterval(() => {
+      setBiometricProgress((prev) => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          setBiometricScanning(false);
+          const logTime = new Date().toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+          addAccessLog({
+            viewer: `${user.name} (${user.hospital})`,
+            time: logTime,
+            method: 'Biometric Scan',
+            status: 'Success',
+            reason: 'Emergency Critical Summary Vitals'
+          });
+          setCountdown(30);
+          setStep('emergency_summary');
+          return 100;
+        }
+        return prev + 10;
+      });
+    }, 150);
+  };
+
+  const handleEmergencyOverride = () => {
+    const logTime = new Date().toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    addAccessLog({
+      viewer: `${user.name} (${user.hospital})`,
+      time: logTime,
+      method: 'Emergency Override',
+      status: 'Override Approved',
+      reason: 'Accident/Trauma Override'
+    });
+    setOverrideUnlocked(true);
+    setActivePatientSession({ patient: PATIENT, mode: 'emergency' });
+    alert("Emergency override approved and logged. Patient's emergency contacts have been notified via SMS.");
+  };
+
+  const TABS = overrideUnlocked 
+    ? ['Emergency summary','Full record','Blood bank','Lab reports']
+    : ['Emergency summary','Blood bank'];
+
+  if (step === 'patient_dashboard' && activePatientSession) {
+    const patient = activePatientSession.patient;
+    return (
+      <div className="flex flex-col gap-5 animate-fade-in text-left">
+        <div className="flex items-center justify-between">
+          <AlertBanner variant="teal" icon="ti-qrcode"
+            title={`QR-authenticated session · Patient: ${patient.name}`}
+            detail={`UID: ${patient.uid} · Blood group: ${patient.bloodGroup} · Mode: ${activePatientSession.mode === 'emergency' ? 'Emergency Override Unlocked' : 'Standard View'}`}/>
+          <button 
+            onClick={() => {
+              setActivePatientSession(null);
+              setStep('request_access');
+              setOverrideUnlocked(false);
+            }} 
+            className="px-4 py-2 border border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500/20 text-xs font-semibold rounded-lg cursor-pointer transition-all flex items-center gap-1.5"
+          >
+            <i className="ti ti-lock"/> Close Session
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <StatCard icon="ti-drop" iconBg="bg-red-50 text-red-500" value={patient.bloodGroup} label="Blood group"/>
+          <StatCard icon="ti-pill" iconBg="bg-amber-50 text-amber-600" value={patient.medications.length} label="Active meds"/>
+          <StatCard icon="ti-heart" iconBg="bg-teal-50 text-teal-600" value={patient.organDonor?'Yes':'No'} label="Organ donor"/>
+          <StatCard icon="ti-alert-circle" iconBg="bg-red-50 text-red-500" value={patient.dnr?'Active':'None'} label="DNR" badge={patient.dnr?'Active':'None'} badgeVariant={patient.dnr?'red':'gray'}/>
+        </div>
+
+        <Card noPad>
+          <div className="flex border-b border-gray-100 overflow-x-auto">
+            {TABS.map((t,i)=>(
+              <button key={t} onClick={()=>setTab(i)}
+                className="px-5 py-3 text-sm font-medium whitespace-nowrap -mb-px cursor-pointer bg-transparent border-l-0 border-r-0 border-t-0 transition-colors"
+                style={{color:tab===i?'#00968A':'#9ca3af',borderBottom:tab===i?'2px solid #00B8A9':'2px solid transparent'}}>
+                {t}
+              </button>
+            ))}
+          </div>
+
+          <div className="p-5">
+            {tab===0 && (
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-widest mb-3">Chronic conditions</p>
+                  <div className="space-y-2">
+                    {patient.currentDiseases.map(d=>(
+                      <div key={d.id} className="flex items-start gap-2.5 bg-gray-50 rounded-xl px-3 py-2.5">
+                        <StatusDot status="active"/><div className="text-left"><p className="text-sm font-medium text-navy-600">{d.name}</p><p className="text-xs text-gray-400">{d.note}</p></div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-widest mt-4 mb-3">Current medications</p>
+                  <div className="space-y-2">
+                    {patient.medications.map(m=>(
+                      <div key={m.id} className="flex items-center gap-2.5 bg-gray-50 rounded-xl px-3 py-2.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-teal-400"/>
+                        <p className="text-sm text-navy-600 flex-1 text-left">{m.name} <span className="text-gray-400">{m.dose}</span></p>
+                        <Badge variant="teal">{m.frequency}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-widest mb-3">Surgical history</p>
+                  <div className="space-y-2">
+                    {patient.surgeries.map(s=>(
+                      <div key={s.id} className="bg-gray-50 rounded-xl px-3 py-2.5 text-left">
+                        <p className="text-sm font-medium text-navy-600">{s.name}</p>
+                        <p className="text-xs text-gray-400">{s.date} · {s.hospital}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-widest mt-4 mb-3">Emergency contacts</p>
+                  <div className="space-y-2">
+                    {patient.emergencyContacts.map(ec=>(
+                      <div key={ec.id} className="flex items-center gap-3 rounded-xl px-3 py-2.5" style={{background:'rgba(245,158,11,0.08)',border:'1px solid rgba(245,158,11,0.18)'}}>
+                        <div className="w-7 h-7 rounded-full bg-amber-400 flex items-center justify-center text-xs text-white font-medium">
+                          {ec.name.split(' ').map(n=>n[0]).join('')}
+                        </div>
+                        <div className="flex-1 text-left">
+                          <p className="text-sm font-medium text-navy-600">{ec.name}</p>
+                          <p className="text-xs text-gray-400">{ec.relation}</p>
+                        </div>
+                        <p className="text-xs text-amber-600 font-mono">{ec.phone}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {tab===1 && overrideUnlocked && (
+              <div className="space-y-4 animate-fade-in">
+                <div className="grid md:grid-cols-3 gap-3">
+                  {[{l:'Full name',v:patient.name},{l:'DOB',v:patient.dob},{l:'Blood group',v:patient.bloodGroup},{l:'Birthmark',v:patient.birthmark},{l:'DNR',v:patient.dnr?'Active':'None'},{l:'Organ donor',v:patient.organDonor?'Yes':'No'}].map(({l,v})=>(
+                    <div key={l} className="bg-gray-50 rounded-xl px-3 py-2.5 text-left"><p className="text-[10px] text-gray-400 uppercase tracking-wider">{l}</p><p className="text-sm font-medium text-navy-600 mt-1">{v}</p></div>
+                  ))}
+                </div>
+                <p className="text-xs font-medium text-gray-400 uppercase tracking-widest text-left">All conditions ({patient.totalDiseases.length})</p>
+                <div className="divide-y divide-gray-50 border border-gray-100 rounded-xl overflow-hidden bg-gray-50">
+                  {patient.totalDiseases.map(d=>(
+                    <div key={d.id} className="px-4 py-3 flex items-center gap-3">
+                      <StatusDot status={d.status}/>
+                      <div className="flex-1 text-left">
+                        <p className="text-sm font-medium text-navy-600">{d.name}</p>
+                        <p className="text-xs text-gray-400">Since {d.since} · {d.note}</p>
+                      </div>
+                      <Badge variant={d.status==='active'?'red':'gray'}>{d.status==='active'?'Active':'Resolved'}</Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {((tab===1 && !overrideUnlocked) || (tab===2 && overrideUnlocked)) && (
+              <div className="space-y-4">
+                <p className="text-xs font-medium text-gray-400 uppercase tracking-widest text-left">Nearby Blood Banks</p>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {patient.bloodBankNearby.map((bb,idx)=>(
+                    <div key={idx} className="border border-gray-100 rounded-xl p-4 bg-gray-50 flex flex-col justify-between gap-3 shadow-sm hover:shadow-md transition-shadow text-left">
+                      <div>
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-sm font-semibold text-white">{bb.name}</p>
+                          <Badge variant={bb.available?'green':'red'}>{bb.available?'Stock Available':'No Stock'}</Badge>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1 text-left"><i className="ti ti-map-pin mr-1 text-teal-500"/>{bb.distance} away · {bb.hours}</p>
+                      </div>
+                      <div className="flex items-center justify-between border-t border-gray-50/10 pt-3 mt-1">
+                        <span className="text-xs font-mono text-gray-400">{bb.phone}</span>
+                        <a href={`tel:${bb.phone}`} className="text-xs text-teal-400 hover:text-teal-300 font-semibold flex items-center gap-1">
+                          <i className="ti ti-phone"/> Call Bank
+                        </a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {tab===3 && overrideUnlocked && (
+              <div className="space-y-3 text-left">
+                <p className="text-xs font-medium text-gray-400 uppercase tracking-widest text-left">Uploaded Labs & Reports</p>
+                <div className="divide-y divide-gray-50/10 border border-gray-100 rounded-xl overflow-hidden bg-gray-50">
+                  {patient.reports.map(r=>(
+                    <div key={r.id} className="px-4 py-3 flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 bg-teal-500/10 rounded-lg flex items-center justify-center flex-shrink-0 text-teal-400">
+                          <i className="ti ti-file-analytics text-lg"/>
+                        </div>
+                        <div className="text-left">
+                          <p className="text-sm font-semibold text-white">{r.name}</p>
+                          <p className="text-xs text-gray-400">{r.lab} · {r.date} · {r.type} · {r.size}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={r.verified?'green':'amber'}>{r.verified?'Verified':'Pending'}</Badge>
+                        <button className="w-8 h-8 rounded-lg hover:bg-white/5 flex items-center justify-center text-gray-400 hover:text-teal-400 cursor-pointer border-none bg-transparent transition-colors">
+                          <i className="ti ti-download text-base"/>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
+    <div className="min-h-[70vh] flex flex-col items-center justify-center p-4">
+      {step === 'verify_license' && (
+        <div className="w-full max-w-md card p-6 text-center space-y-5 animate-fade-in">
+          <div className="w-16 h-16 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400 flex items-center justify-center mx-auto text-2xl">
+            <i className="ti ti-stethoscope"/>
+          </div>
+          <div>
+            <h2 className="font-display text-xl font-semibold text-white">NMC License Verification</h2>
+            <p className="text-xs text-gray-400 mt-1.5">Verify your clinical credentials with the National Medical Commission registry.</p>
+          </div>
 
-    <div className="flex flex-col gap-5 animate-fade-in">
+          <div className="text-left">
+            <label className="block text-white/40 text-xs uppercase tracking-widest mb-1.5 font-medium">MCI / NMC License ID</label>
+            <input 
+              className="input-field" 
+              value={licenseId} 
+              onChange={e=>setLicenseId(e.target.value)} 
+              placeholder="MCI-DL-XXXXXXXX"
+            />
+          </div>
 
-      <AlertBanner variant="teal" icon="ti-qrcode"
+          <button 
+            onClick={handleVerifyLicense} 
+            disabled={verifyingLicense}
+            className="btn-primary w-full cursor-pointer"
+          >
+            {verifyingLicense ? (
+              <><span className="inline-block w-4 h-4 border-2 rounded-full border-white/30 border-t-white animate-spin mr-2"/>Verifying with NMC Registry...</>
+            ) : (
+              <>Verify & Enter Portal <i className="ti ti-shield-check text-base ml-1"/></>
+            )}
+          </button>
+        </div>
+      )}
 
-        title={`QR-authenticated session · Patient: ${user.name}`}
+      {step === 'request_access' && (
+        <div className="w-full max-w-md card p-6 space-y-5 animate-fade-in text-left">
+          <div className="text-center pb-2 border-b border-gray-50/10">
+            <h2 className="font-display text-lg font-semibold text-white">Request Patient Access</h2>
+            <p className="text-xs text-gray-400 mt-1">Authenticate access to patient records using UID/QR code or Emergency overrides.</p>
+          </div>
 
-        detail={`UID: ${user.uid} · Blood group: ${user.bloodGroup} · Viewing authorised data`}/>
+          {errorMsg && (
+            <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/20 text-red-400 text-xs p-3 rounded-lg">
+              <i className="ti ti-alert-circle text-sm mt-0.5"/>
+              <span>{errorMsg}</span>
+            </div>
+          )}
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-white/40 text-xs uppercase tracking-widest mb-1.5 font-medium">Patient Unique ID (UID) / Scan QR</label>
+              <div className="relative">
+                <input 
+                  className="input-field pr-10" 
+                  value={patientUid} 
+                  onChange={e=>setPatientUid(e.target.value)} 
+                  placeholder="XXXX-XXXX-XXXX"
+                />
+                <button className="absolute right-2.5 top-2.5 text-teal-400 hover:text-teal-300 bg-transparent border-none cursor-pointer">
+                  <i className="ti ti-qrcode text-lg"/>
+                </button>
+              </div>
+            </div>
 
-        <StatCard icon="ti-drop" iconBg="bg-red-50 text-red-500" value={user.bloodGroup} label="Blood group"/>
+            <div>
+              <label className="block text-white/40 text-xs uppercase tracking-widest mb-1.5 font-medium">Access Reason</label>
+              <select 
+                value={accessReason} 
+                onChange={e=>setAccessReason(e.target.value)}
+                className="input-field bg-navy-800"
+              >
+                <option value="Routine Checkup">Routine Checkup</option>
+                <option value="Specialty Consultation">Specialty Consultation</option>
+                <option value="Emergency">Emergency (Patient Unconscious / Biometric)</option>
+              </select>
+            </div>
 
-        <StatCard icon="ti-pill" iconBg="bg-amber-50 text-amber-600" value={user.medications.length} label="Active meds"/>
+            {accessReason !== 'Emergency' && (
+              <div>
+                <div className="flex items-center justify-between">
+                  <label className="block text-white/40 text-xs uppercase tracking-widest mb-1.5 font-medium">Approval Code / OTP</label>
+                  <span className="text-[10px] text-teal-500 bg-teal-500/10 border border-teal-500/20 px-1.5 py-0.5 rounded">Demo: 4401</span>
+                </div>
+                <input 
+                  type="password" 
+                  className="input-field font-mono text-center tracking-[4px]" 
+                  value={otp} 
+                  onChange={e=>setOtp(e.target.value)} 
+                  placeholder="XXXX"
+                  maxLength={4}
+                />
+              </div>
+            )}
+          </div>
 
-        <StatCard icon="ti-heart" iconBg="bg-teal-50 text-teal-600" value={user.organDonor?'Yes':'No'} label="Organ donor"/>
+          <button 
+            onClick={handleRequestAccess} 
+            disabled={requestingAccess}
+            className={`w-full py-2.5 text-sm font-semibold rounded-lg text-white font-display cursor-pointer flex items-center justify-center gap-1.5 border-none transition-colors ${
+              accessReason === 'Emergency' ? 'bg-red-500 hover:bg-red-600' : 'bg-teal-500 hover:bg-teal-600'
+            }`}
+          >
+            {requestingAccess ? (
+              <span className="inline-block w-4 h-4 border-2 rounded-full border-white/30 border-t-white animate-spin"/>
+            ) : accessReason === 'Emergency' ? (
+              <>Initiate Emergency Biometric Scan <i className="ti ti-fingerprint"/></>
+            ) : (
+              <>Request Patient Records <i className="ti ti-arrow-right"/></>
+            )}
+          </button>
+        </div>
+      )}
 
-        <StatCard icon="ti-alert-circle" iconBg="bg-red-50 text-red-500" value={user.dnr?'Active':'None'} label="DNR" badge={user.dnr?'Active':'None'} badgeVariant={user.dnr?'red':'gray'}/>
+      {step === 'emergency_biometric' && (
+        <div className="w-full max-w-md card p-6 text-center space-y-6 animate-fade-in">
+          <div>
+            <span className="px-2.5 py-1 border border-red-500/20 bg-red-500/10 text-red-400 text-[10px] font-semibold tracking-wider uppercase rounded-full">Emergency Mode</span>
+            <h2 className="font-display text-lg font-semibold text-white mt-3">Patient Identity Verification</h2>
+            <p className="text-xs text-gray-400 mt-1 leading-relaxed">Establish hospital and staff authorization, then perform biometric fingerprint verification.</p>
+          </div>
 
-      </div>
+          <div className="space-y-2.5 text-left bg-white/5 border border-white/10 rounded-xl p-4">
+            <div className="flex items-center gap-2 text-xs text-emerald-400">
+              <i className="ti ti-circle-check-filled text-sm"/>
+              <span>Hospital Authority Verified (ABDM System ID Active)</span>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-emerald-400">
+              <i className="ti ti-circle-check-filled text-sm"/>
+              <span>Medical Professional Verified ({licenseId})</span>
+            </div>
+          </div>
 
-      <Card noPad>
-
-        <div className="flex border-b border-gray-100 overflow-x-auto">
-
-          {TABS.map((t,i)=>(
-
-            <button key={t} onClick={()=>setTab(i)}
-
-              className="px-5 py-3 text-sm font-medium whitespace-nowrap -mb-px cursor-pointer bg-transparent border-l-0 border-r-0 border-t-0 transition-colors"
-
-              style={{color:tab===i?'#00968A':'#9ca3af',borderBottom:tab===i?'2px solid #00B8A9':'2px solid transparent'}}>
-
-              {t}
-
+          <div className="flex flex-col items-center justify-center py-4">
+            <button
+              onClick={handleStartBiometricScan}
+              disabled={biometricScanning}
+              className={`w-28 h-28 rounded-full border-2 border-red-500/20 flex flex-col items-center justify-center cursor-pointer transition-all relative overflow-hidden ${
+                biometricScanning ? 'bg-red-500/5 ring-8 ring-red-500/10 scale-95' : 'bg-red-500/10 hover:scale-105 active:scale-95'
+              }`}
+            >
+              {biometricScanning && (
+                <div 
+                  className="absolute bottom-0 left-0 w-full bg-red-500/30 transition-all duration-300"
+                  style={{ height: `${biometricProgress}%` }}
+                />
+              )}
+              <i className={`ti ti-fingerprint text-4xl relative z-10 ${biometricScanning ? 'text-red-400 animate-pulse' : 'text-red-500'}`}/>
             </button>
+            <p className="text-xs font-semibold text-white mt-4 tracking-wider">
+              {biometricScanning ? `Scanning Biometrics... ${biometricProgress}%` : 'Tap Fingerprint to Scan'}
+            </p>
+          </div>
 
-          ))}
-
+          <button 
+            onClick={() => setStep('request_access')} 
+            className="text-xs text-gray-400 hover:text-white bg-transparent border-none cursor-pointer flex items-center gap-1 mx-auto"
+          >
+            <i className="ti ti-arrow-left"/> Go back
+          </button>
         </div>
+      )}
 
-        <div className="p-5">
+      {step === 'emergency_summary' && (
+        <div className="w-full max-w-2xl card p-6 space-y-6 animate-fade-in text-left border-red-500/30">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-gray-50/10 pb-3 gap-3">
+            <div>
+              <span className="px-2.5 py-1 border border-red-500/20 bg-red-500/10 text-red-400 text-[10px] font-semibold tracking-wider uppercase rounded-full">Critical Emergency Summary</span>
+              <h2 className="font-display text-lg font-semibold text-white mt-2">Patient Identified: Rahul Sharma</h2>
+            </div>
+            <div className="px-3.5 py-1.5 bg-red-500/20 border border-red-500/30 text-red-400 font-mono text-sm font-semibold rounded-lg flex items-center gap-2">
+              <i className="ti ti-alarm animate-pulse"/>
+              <span>00:{countdown.toString().padStart(2, '0')}</span>
+            </div>
+          </div>
 
-          {tab===0 && (
+          <AlertBanner variant="red" icon="ti-alert-circle" title="DNR Order Documented" detail="Do Not Resuscitate (DNR) instruction is actively registered for this identity."/>
 
-            <div className="grid md:grid-cols-2 gap-6">
-
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3">
+              <p className="text-xs font-medium text-gray-400 uppercase tracking-widest">Medical Basics</p>
               <div>
-
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-widest mb-3">Chronic conditions</p>
-
-                <div className="space-y-2">
-
-                  {user.currentDiseases.map(d=>(
-
-                    <div key={d.id} className="flex items-start gap-2.5 bg-gray-50 rounded-xl px-3 py-2.5">
-
-                      <StatusDot status="active"/><div><p className="text-sm font-medium text-navy-600">{d.name}</p><p className="text-xs text-gray-400">{d.note}</p></div>
-
-                    </div>
-
-                  ))}
-
-                </div>
-
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-widest mt-4 mb-3">Current medications</p>
-
-                <div className="space-y-2">
-
-                  {user.medications.map(m=>(
-
-                    <div key={m.id} className="flex items-center gap-2.5 bg-gray-50 rounded-xl px-3 py-2.5">
-
-                      <span className="w-1.5 h-1.5 rounded-full bg-teal-400"/>
-
-                      <p className="text-sm text-navy-600 flex-1">{m.name} <span className="text-gray-400">{m.dose}</span></p>
-
-                      <Badge variant="teal">{m.frequency}</Badge>
-
-                    </div>
-
-                  ))}
-
-                </div>
-
+                <span className="text-[10px] text-gray-400 uppercase">Blood Group</span>
+                <p className="text-sm font-semibold text-white">B+ (Rh Positive)</p>
               </div>
-
               <div>
-
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-widest mb-3">Surgical history</p>
-
-                <div className="space-y-2">
-
-                  {user.surgeries.map(s=>(
-
-                    <div key={s.id} className="bg-gray-50 rounded-xl px-3 py-2.5">
-
-                      <p className="text-sm font-medium text-navy-600">{s.name}</p>
-
-                      <p className="text-xs text-gray-400">{s.date} · {s.hospital}</p>
-
-                    </div>
-
-                  ))}
-
-                </div>
-
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-widest mt-4 mb-3">Emergency contacts</p>
-
-                <div className="space-y-2">
-
-                  {user.emergencyContacts.map(ec=>(
-
-                    <div key={ec.id} className="flex items-center gap-3 rounded-xl px-3 py-2.5" style={{background:'#FFFBF0',border:'1px solid #FEE5C0'}}>
-
-                      <div className="w-7 h-7 rounded-full bg-amber-400 flex items-center justify-center text-xs text-white font-medium">
-
-                        {ec.name.split(' ').map(n=>n[0]).join('')}
-
-                      </div>
-
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-navy-600">{ec.name}</p>
-                        <p className="text-xs text-gray-400">{ec.relation}</p>
-                      </div>
-                      <p className="text-xs text-amber-600 font-mono">{ec.phone}</p>
-                    </div>
-                  ))}
-                </div>
+                <span className="text-[10px] text-gray-400 uppercase">Allergies</span>
+                <p className="text-sm font-semibold text-red-400">No known drug allergies (NKDA)</p>
+              </div>
+              <div>
+                <span className="text-[10px] text-gray-400 uppercase">Chronic Conditions</span>
+                <p className="text-sm font-medium text-white">Type 2 Diabetes Mellitus, Hypertension</p>
               </div>
             </div>
-          )}
-          {tab===1 && (
-            <div className="space-y-4">
-              <div className="grid md:grid-cols-3 gap-3">
-                {[{l:'Full name',v:user.name},{l:'DOB',v:user.dob},{l:'Blood group',v:user.bloodGroup},{l:'Birthmark',v:user.birthmark},{l:'DNR',v:user.dnr?'Active':'None'},{l:'Organ donor',v:user.organDonor?'Yes':'No'}].map(({l,v})=>(
-                  <div key={l} className="bg-gray-50 rounded-xl px-3 py-2.5"><p className="text-[10px] text-gray-400 uppercase tracking-wider">{l}</p><p className="text-sm font-medium text-navy-600 mt-1">{v}</p></div>
-                ))}
-              </div>
-              <p className="text-xs font-medium text-gray-400 uppercase tracking-widest">All conditions ({user.totalDiseases.length})</p>
-              <div className="divide-y divide-gray-50 border border-gray-100 rounded-xl overflow-hidden bg-gray-50">
-                {user.totalDiseases.map(d=>(
-                  <div key={d.id} className="px-4 py-3 flex items-center gap-3">
-                    <StatusDot status={d.status}/>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-navy-600">{d.name}</p>
-                      <p className="text-xs text-gray-400">Since {d.since} · {d.note}</p>
-                    </div>
-                    <Badge variant={d.status==='active'?'red':'gray'}>{d.status==='active'?'Active':'Resolved'}</Badge>
-                  </div>
-                ))}
-              </div>
 
-              <p className="text-xs font-medium text-gray-400 uppercase tracking-widest mt-5">Active Medications</p>
-              <div className="divide-y divide-gray-50 border border-gray-100 rounded-xl overflow-hidden mt-2 bg-white">
-                {user.medications.map(m=>(
-                  <div key={m.id} className="px-4 py-3 flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-semibold text-navy-600">{m.name} <span className="font-normal text-gray-400">{m.dose}</span></p>
-                      <p className="text-xs text-gray-400">{m.doctor} · {m.hospital}</p>
-                    </div>
-                    <Badge variant="teal">{m.frequency}</Badge>
-                  </div>
-                ))}
+            <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3">
+              <p className="text-xs font-medium text-gray-400 uppercase tracking-widest">Contacts & Insurance</p>
+              <div>
+                <span className="text-[10px] text-gray-400 uppercase">Emergency Contact</span>
+                <p className="text-sm font-semibold text-white">Priya Sharma (Spouse) · +91 98100 XXXXX</p>
               </div>
+              <div>
+                <span className="text-[10px] text-gray-400 uppercase">Government Insurance</span>
+                <p className="text-sm font-semibold text-emerald-400">Ayushman Bharat (AB-MP-2203XXXXX)</p>
+              </div>
+              <div>
+                <span className="text-[10px] text-gray-400 uppercase">Current Medications</span>
+                <p className="text-xs text-gray-400 leading-relaxed">Metformin 500mg, Amlodipine 5mg, Atorvastatin 20mg</p>
+              </div>
+            </div>
+          </div>
 
-              <p className="text-xs font-medium text-gray-400 uppercase tracking-widest mt-5">Surgical Interventions</p>
-              <div className="divide-y divide-gray-50 border border-gray-100 rounded-xl overflow-hidden mt-2 bg-white">
-                {user.surgeries.map(s=>(
-                  <div key={s.id} className="px-4 py-3.5 flex items-start justify-between">
-                    <div>
-                      <p className="text-sm font-semibold text-navy-600">{s.name}</p>
-                      <p className="text-xs text-gray-400">{s.date} · {s.type}</p>
-                      <p className="text-xs text-teal-600 mt-1">{s.hospital} · {s.doctor}</p>
-                    </div>
-                    <Badge variant="purple">{s.city}</Badge>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          {tab===2 && (
-            <div className="space-y-4">
-              <p className="text-xs font-medium text-gray-400 uppercase tracking-widest">Nearby Blood Banks</p>
-              <div className="grid sm:grid-cols-2 gap-4">
-                {user.bloodBankNearby.map((bb,idx)=>(
-                  <div key={idx} className="border border-gray-100 rounded-xl p-4 bg-gray-50 flex flex-col justify-between gap-3 shadow-sm hover:shadow-md transition-shadow">
-                    <div>
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm font-semibold text-navy-600">{bb.name}</p>
-                        <Badge variant={bb.available?'green':'red'}>{bb.available?'Stock Available':'No Stock'}</Badge>
-                      </div>
-                      <p className="text-xs text-gray-400 mt-1"><i className="ti ti-map-pin mr-1 text-teal-500"/>{bb.distance} away · {bb.hours}</p>
-                    </div>
-                    <div className="flex items-center justify-between border-t border-gray-50 pt-3 mt-1">
-                      <span className="text-xs font-mono text-gray-500">{bb.phone}</span>
-                      <a href={`tel:${bb.phone}`} className="text-xs text-teal-600 hover:text-teal-700 font-semibold flex items-center gap-1">
-                        <i className="ti ti-phone"/> Call Bank
-                      </a>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          {tab===3 && (
-            <div className="space-y-3">
-              <p className="text-xs font-medium text-gray-400 uppercase tracking-widest">Uploaded Labs & Reports</p>
-              <div className="divide-y divide-gray-50 border border-gray-100 rounded-xl overflow-hidden bg-gray-50">
-                {user.reports.map(r=>(
-                  <div key={r.id} className="px-4 py-3 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 bg-teal-50 rounded-lg flex items-center justify-center flex-shrink-0 text-teal-500">
-                        <i className="ti ti-file-analytics text-lg"/>
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-navy-600">{r.name}</p>
-                        <p className="text-xs text-gray-400">{r.lab} · {r.date} · {r.type} · {r.size}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant={r.verified?'green':'amber'}>{r.verified?'Verified':'Pending'}</Badge>
-                      <button className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-teal-500 cursor-pointer border-none bg-transparent transition-colors">
-                        <i className="ti ti-download text-base"/>
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          <div className="flex flex-col sm:flex-row gap-3 pt-2">
+            <button 
+              onClick={handleEmergencyOverride}
+              className="flex-1 py-3 text-sm font-semibold rounded-lg bg-red-600 hover:bg-red-700 text-white font-display border-none cursor-pointer flex items-center justify-center gap-1.5"
+            >
+              <i className="ti ti-lock-open"/> Request Full Medical History (Emergency Override)
+            </button>
+            <button 
+              onClick={() => {
+                setActivePatientSession(null);
+                setStep('request_access');
+                setOverrideUnlocked(false);
+              }}
+              className="px-5 py-3 text-sm font-semibold rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white cursor-pointer hover:bg-white/10"
+            >
+              Cancel Access
+            </button>
+          </div>
         </div>
-      </Card>
+      )}
     </div>
   );
 }
@@ -1865,6 +2614,10 @@ function DocumentsView() {
     setDragActive(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
+      if (file.size > 1 * 1024 * 1024) {
+        alert("File size exceeds 1MB. Please upload a smaller document.");
+        return;
+      }
       const newDoc = {
         id: reports.length + 1,
         name: file.name.split('.')[0],
@@ -1886,6 +2639,10 @@ function DocumentsView() {
   const handleFileInput = (e) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      if (file.size > 1 * 1024 * 1024) {
+        alert("File size exceeds 1MB. Please upload a smaller document.");
+        return;
+      }
       const newDoc = {
         id: reports.length + 1,
         name: file.name.split('.')[0],
@@ -1927,7 +2684,7 @@ function DocumentsView() {
         <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileInput}/>
         <i className="ti ti-cloud-upload text-4xl text-gray-300 block mb-2"/>
         <p className="text-sm font-semibold text-navy-600">Drag files here or click to upload</p>
-        <p className="text-xs text-gray-400 mt-1">PDF, DICOM, JPG, PNG up to 50MB</p>
+        <p className="text-xs text-gray-400 mt-1">PDF, DICOM, JPG, PNG up to 1MB</p>
       </div>
 
       <Card noPad>
@@ -1982,6 +2739,7 @@ function App() {
       case 'insurance': return <InsuranceView />;
       case 'emergency': return <EmergencyView />;
       case 'identity': return <IdentityView />;
+      case 'access_control': return <AccessControlView />;
       case 'doctor_view': return <DoctorView />;
       default: return <Dashboard />;
     }
