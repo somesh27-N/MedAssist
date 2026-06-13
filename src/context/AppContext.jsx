@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase, isSupabaseConfigured } from '../supabase';
 
 // Default Demo Patient Profile
@@ -64,6 +64,7 @@ const AppCtx = createContext(null);
 export function AppProvider({ children }) {
   const [user, setUser] = useState(null);
   const [view, setView] = useState('dashboard');
+  const [authError, setAuthError] = useState(null);
   
   const [permissions, setPermissions] = useState({
     'Kapoor': { id: 'Kapoor', name: 'Dr. S. Kapoor', hospital: 'AIIMS New Delhi', status: 'authorized' },
@@ -125,6 +126,123 @@ export function AppProvider({ children }) {
     { id: 4, name: 'Nurse Anjali Sharma', role: 'ICU Head Nurse', status: 'On Duty' },
   ]);
 
+  // ── SUPABASE CONNECTION CHECK ───────────────────────────────────────────────
+  useEffect(() => {
+    if (!isSupabaseConfigured) {
+      console.warn('[MedAssist] Supabase not configured — running in local/demo mode.');
+      return;
+    }
+    supabase.from('profiles').select('count', { count: 'exact', head: true })
+      .then(({ error }) => {
+        if (error) console.error('[MedAssist] Supabase connection failed:', error.message);
+        else console.log('[MedAssist] ✅ Supabase connected successfully.');
+      });
+  }, []);
+
+  // ── SIGN-UP FUNCTIONS ─────────────────────────────────────────────────────────
+
+  const signUpCitizen = async ({ name, phone, email, aadhaar }) => {
+    setAuthError(null);
+    if (!isSupabaseConfigured) {
+      // Demo mode — just return a mock profile
+      return {
+        ...DEMO_PATIENT,
+        name: name || DEMO_PATIENT.name,
+        phone: phone || DEMO_PATIENT.phone,
+        uid: aadhaar ? `${aadhaar.slice(0,4)}-XXXX-${aadhaar.slice(-4)}` : DEMO_PATIENT.uid,
+      };
+    }
+    try {
+      const uid = aadhaar
+        ? `${aadhaar.replace(/\s/g, '').slice(0,4)}-XXXX-${aadhaar.replace(/\s/g, '').slice(-4)}`
+        : `UID-${Date.now()}`;
+
+      // Check if user already exists
+      const { data: existing } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('uid', uid)
+        .maybeSingle();
+
+      if (existing) {
+        setAuthError('An account with this Aadhaar number already exists. Please sign in.');
+        return null;
+      }
+
+      const { data, error } = await supabase.from('profiles').insert({
+        name: name || 'New User',
+        phone: phone || '',
+        uid,
+        gender: '',
+        dob: '',
+        blood_group: '',
+        address: '',
+        birthmark: '',
+        dnr: false,
+        organ_donor: false,
+        local_save: true,
+      }).select().single();
+
+      if (error) throw error;
+      console.log('[MedAssist] New citizen saved to Supabase:', data.id);
+      return data;
+    } catch (err) {
+      console.error('[MedAssist] signUpCitizen error:', err);
+      setAuthError(err.message || 'Sign-up failed. Please try again.');
+      return null;
+    }
+  };
+
+  const signUpDoctor = async ({ name, phone, email, license, hospital }) => {
+    setAuthError(null);
+    if (!isSupabaseConfigured) {
+      return {
+        ...DEMO_PATIENT,
+        name: name || 'Dr. Anand Joshi',
+        phone: phone || DEMO_PATIENT.phone,
+        uid: license || 'MCI-DL-9938102',
+        hospital: hospital || 'AIIMS New Delhi',
+      };
+    }
+    try {
+      const uid = license || `MCI-${Date.now()}`;
+
+      // Check if doctor already exists
+      const { data: existing } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('uid', uid)
+        .maybeSingle();
+
+      if (existing) {
+        setAuthError('A doctor account with this MCI License already exists. Please sign in.');
+        return null;
+      }
+
+      const { data, error } = await supabase.from('profiles').insert({
+        name: name || 'Doctor',
+        phone: phone || '',
+        uid,
+        gender: '',
+        dob: '',
+        blood_group: '',
+        address: hospital || '',
+        birthmark: '',
+        dnr: false,
+        organ_donor: false,
+        local_save: false,
+      }).select().single();
+
+      if (error) throw error;
+      console.log('[MedAssist] New doctor saved to Supabase:', data.id);
+      return data;
+    } catch (err) {
+      console.error('[MedAssist] signUpDoctor error:', err);
+      setAuthError(err.message || 'Doctor sign-up failed. Please try again.');
+      return null;
+    }
+  };
+
   // Load hospital registry dynamically if Supabase is connected
   const loadHospitalData = async () => {
     if (!isSupabaseConfigured) return;
@@ -150,7 +268,14 @@ export function AppProvider({ children }) {
 
   const loadPatientData = async (role, searchParam, isUid = false) => {
     if (!isSupabaseConfigured) {
-      return { role, ...DEMO_PATIENT };
+      // In demo mode, only return data for demo user, else null
+      const matchesUid = DEMO_PATIENT.uid === searchParam;
+      const matchesPhone = DEMO_PATIENT.phone === searchParam;
+      if (matchesUid || matchesPhone || !searchParam) {
+        return { role, ...DEMO_PATIENT };
+      }
+      // Real user in demo mode — return a skeleton with empty medical data
+      return { role, ...DEMO_PATIENT, uid: searchParam, medications: [], totalDiseases: [], currentDiseases: [], surgeries: [], reports: [], emergencyContacts: [] };
     }
 
     try {
@@ -158,13 +283,14 @@ export function AppProvider({ children }) {
       if (isUid) {
         query = query.eq('uid', searchParam);
       } else {
-        query = query.eq('name', searchParam);
+        // phone-based lookup
+        query = query.eq('phone', searchParam);
       }
 
       const { data: profiles, error: profileErr } = await query;
       if (profileErr || !profiles || profiles.length === 0) {
-        console.error('Profile not found in Supabase. Falling back to memory DEMO_PATIENT.');
-        return { role, ...DEMO_PATIENT };
+        console.warn('[MedAssist] Profile not found in Supabase for:', searchParam);
+        return null; // Caller (login) will handle this gracefully
       }
 
       const profile = profiles[0];
@@ -214,15 +340,24 @@ export function AppProvider({ children }) {
         ],
       };
     } catch (err) {
-      console.error('Error loading Supabase patient data:', err);
-      return { role, ...DEMO_PATIENT };
+      console.error('[MedAssist] Error loading patient data from Supabase:', err);
+      return null;
     }
   };
 
   const login = async (role, data) => {
+    setAuthError(null);
     let patientData = data;
+
     if (role === 'user' || role === 'doctor') {
-      patientData = await loadPatientData(role, data.uid || '7823-XXXX-4401', true);
+      // Use the actual typed UID/phone for the lookup
+      const lookupParam = data.uid || data.phone || '7823-XXXX-4401';
+      const isUid = !!(data.uid);
+      patientData = await loadPatientData(role, lookupParam, isUid);
+      if (!patientData) {
+        setAuthError('No account found with those credentials. Please sign up first.');
+        return;
+      }
     } else if (role === 'hospital') {
       patientData = { role, ...data };
       await loadHospitalData();
@@ -740,6 +875,10 @@ export function AppProvider({ children }) {
 
   return (
     <AppCtx.Provider value={{
+      authError,
+      setAuthError,
+      signUpCitizen,
+      signUpDoctor,
       user,
       view,
       setView,

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useApp, DEMO_PATIENT } from '../context/AppContext';
 
 export function LoginScreen() {
-  const { login } = useApp();
+  const { login, signUpCitizen, signUpDoctor, authError, setAuthError } = useApp();
   const [portal, setPortal] = useState('user');
   const [method, setMethod] = useState('Aadhaar');
   const [loading, setLoading] = useState(false);
@@ -51,6 +51,7 @@ export function LoginScreen() {
 
   const doSubmit = (e) => {
     if (e) e.preventDefault();
+    setAuthError(null);
     setLoading(true);
     setTimeout(async () => {
       try {
@@ -61,42 +62,56 @@ export function LoginScreen() {
 
         if (isSignUp) {
           if (portal === 'doctor') {
+            // Register doctor in Supabase first
+            const profile = await signUpDoctor({
+              name: doctorName,
+              phone: doctorPhone,
+              email: doctorEmail,
+              license: doctorLicense,
+              hospital: doctorHospital,
+            });
+            if (!profile) return; // authError already set
             const docData = {
               ...DEMO_PATIENT,
-              name: doctorName || 'Dr. Anand Joshi',
-              phone: doctorPhone || '+91 98100 XXXXX',
-              email: doctorEmail || 'dr.anand.joshi@gmail.com',
-              uid: doctorLicense || 'MCI-DL-9938102',
-              hospital: doctorHospital || 'AIIMS New Delhi'
+              name: profile.name || doctorName || 'Dr. Anand Joshi',
+              phone: profile.phone || doctorPhone || DEMO_PATIENT.phone,
+              uid: profile.uid || doctorLicense || 'MCI-DL-9938102',
+              hospital: doctorHospital || 'AIIMS New Delhi',
+              id: profile.id,
             };
             await login('doctor', docData);
           } else {
+            // Register citizen in Supabase first
+            const profile = await signUpCitizen({
+              name: citizenName,
+              phone: citizenPhone,
+              email: citizenEmail,
+              aadhaar: citizenAadhaar,
+            });
+            if (!profile) return; // authError already set
             const patData = {
               ...DEMO_PATIENT,
-              name: citizenName || 'Rahul Sharma',
-              phone: citizenPhone || '+91 98100 XXXXX',
-              email: citizenEmail || 'rahul.sharma@gmail.com',
-              uid: citizenAadhaar ? `${citizenAadhaar.slice(0,4)}-XXXX-${citizenAadhaar.slice(-4)}` : '7823-XXXX-4401'
+              name: profile.name || citizenName || 'New User',
+              phone: profile.phone || citizenPhone || DEMO_PATIENT.phone,
+              uid: profile.uid,
+              id: profile.id,
             };
             await login('user', patData);
           }
         } else {
-          // Sign In
+          // Sign In — pass real typed credentials
           if (portal === 'doctor') {
-            const docData = {
-              ...DEMO_PATIENT,
-              name: 'Dr. S. Kapoor',
-              uid: loginLicense || 'MCI-DL-8829103',
-              hospital: loginHospital || 'AIIMS New Delhi'
-            };
-            await login('doctor', docData);
+            await login('doctor', {
+              uid: loginLicense || undefined,
+              hospital: loginHospital || 'AIIMS New Delhi',
+            });
           } else {
-            const patData = {
-              ...DEMO_PATIENT,
-              phone: loginPhone || DEMO_PATIENT.phone,
-              uid: loginAadhaar ? `${loginAadhaar.slice(0,4)}-XXXX-${loginAadhaar.slice(-4)}` : DEMO_PATIENT.uid
-            };
-            await login('user', patData);
+            await login('user', {
+              uid: loginAadhaar
+                ? `${loginAadhaar.replace(/\s/g,'').slice(0,4)}-XXXX-${loginAadhaar.replace(/\s/g,'').slice(-4)}`
+                : undefined,
+              phone: loginPhone || undefined,
+            });
           }
         }
       } catch (err) {
@@ -151,6 +166,20 @@ export function LoginScreen() {
         </div>
 
         <form onSubmit={doSubmit} className="p-6">
+
+          {/* Auth Error Banner */}
+          {authError && (
+            <div className="mb-4 p-3 rounded-lg text-xs font-medium flex items-start gap-2"
+              style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#fca5a5' }}>
+              <i className="ti ti-alert-circle text-sm mt-0.5 shrink-0" />
+              <span>{authError}</span>
+              <button type="button" onClick={() => setAuthError(null)}
+                className="ml-auto text-white/40 hover:text-white/70 bg-transparent border-none cursor-pointer">
+                <i className="ti ti-x text-xs" />
+              </button>
+            </div>
+          )}
+
           {portal === 'hospital' ? (
             isSignUp ? (
               <div className="py-6 text-center text-white/50 space-y-3">
