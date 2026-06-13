@@ -201,7 +201,7 @@ export function AppProvider({ children }) {
         totalDiseases: totalDiseases.map(d => ({ id: d.id, name: d.name, since: d.since, status: d.status, note: d.note })),
         medications: (medRes.data || []).map(m => ({ id: m.id, name: m.name, dose: m.dose, frequency: m.frequency, doctor: m.doctor, hospital: m.hospital, since: m.since })),
         surgeries: (surgeryRes.data || []).map(s => ({ id: s.id, name: s.name, date: s.date, type: s.type, hospital: s.hospital, doctor: s.doctor, city: s.city })),
-        reports: (reportRes.data || []).map(r => ({ id: r.id, name: r.name, date: r.date, lab: r.lab, type: r.type, size: r.size, verified: r.verified })),
+        reports: (reportRes.data || []).map(r => ({ id: r.id, name: r.name, date: r.date, lab: r.lab, type: r.type, size: r.size, verified: r.verified, abnormalities: r.abnormalities, suggestions: r.suggestions })),
         emergencyContacts: (contactRes.data || []).map(ec => ({ id: ec.id, name: ec.name, relation: ec.relation, phone: ec.phone, primary: ec.primary })),
         insurance: {
           ayushman: { active: true, cardNo: 'AB-MP-2203XXXXX', cover: '₹5,00,000', expiry: 'Lifetime' },
@@ -370,7 +370,9 @@ export function AppProvider({ children }) {
           lab: report.lab,
           type: report.type,
           size: report.size,
-          verified: report.verified || false
+          verified: report.verified || false,
+          abnormalities: report.abnormalities || null,
+          suggestions: report.suggestions || null
         }).select();
         if (error) throw error;
         if (data && data[0]) {
@@ -467,7 +469,7 @@ export function AppProvider({ children }) {
         totalDiseases: totalDiseases.map(d => ({ id: d.id, name: d.name, since: d.since, status: d.status, note: d.note })),
         medications: (medRes.data || []).map(m => ({ id: m.id, name: m.name, dose: m.dose, frequency: m.frequency, doctor: m.doctor, hospital: m.hospital, since: m.since })),
         surgeries: (surgeryRes.data || []).map(s => ({ id: s.id, name: s.name, date: s.date, type: s.type, hospital: s.hospital, doctor: s.doctor, city: s.city })),
-        reports: (reportRes.data || []).map(r => ({ id: r.id, name: r.name, date: r.date, lab: r.lab, type: r.type, size: r.size, verified: r.verified })),
+        reports: (reportRes.data || []).map(r => ({ id: r.id, name: r.name, date: r.date, lab: r.lab, type: r.type, size: r.size, verified: r.verified, abnormalities: r.abnormalities, suggestions: r.suggestions })),
         emergencyContacts: (contactRes.data || []).map(ec => ({ id: ec.id, name: ec.name, relation: ec.relation, phone: ec.phone, primary: ec.primary })),
       };
     } catch (err) {

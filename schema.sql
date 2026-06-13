@@ -65,6 +65,8 @@ CREATE TABLE IF NOT EXISTS public.reports (
     type TEXT,
     size TEXT,
     verified BOOLEAN DEFAULT false,
+    abnormalities TEXT,
+    suggestions TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -307,3 +309,8 @@ ALTER TABLE public.admissions DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.blood_inventory DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.staff DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.insurance DISABLE ROW LEVEL SECURITY;
+
+-- ── DATABASE MIGRATION FOR EXISTING INSTANCES ────────────────────────────────
+-- Run these statements in your Supabase SQL Editor if your tables are already created:
+-- ALTER TABLE public.reports ADD COLUMN IF NOT EXISTS abnormalities TEXT;
+-- ALTER TABLE public.reports ADD COLUMN IF NOT EXISTS suggestions TEXT;

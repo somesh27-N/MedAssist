@@ -15,6 +15,11 @@ export function DocumentsView() {
   const [aiExtractedData, setAiExtractedData] = useState(null);
   const [previewSrc, setPreviewSrc] = useState(null);
   const [pendingReport, setPendingReport] = useState(null);
+  const [expandedReport, setExpandedReport] = useState(null);
+
+  const toggleExpandReport = (id) => {
+    setExpandedReport(prev => prev === id ? null : id);
+  };
 
   const fileInputRef = useRef(null);
 
@@ -87,7 +92,12 @@ export function DocumentsView() {
     
     // 1. Add the report itself to database (marked as verified now!)
     if (pendingReport) {
-      await addReport({ ...pendingReport, verified: true });
+      await addReport({ 
+        ...pendingReport, 
+        verified: true, 
+        abnormalities: verifiedData.abnormalities, 
+        suggestions: verifiedData.suggestions 
+      });
     }
     
     // 2. Add medications
@@ -166,22 +176,47 @@ export function DocumentsView() {
         <div className="divide-y divide-gray-50">
           {filtered.length > 0 ? (
             filtered.map(r => (
-              <div key={r.id} className="px-5 py-3.5 flex items-center justify-between gap-3 hover:bg-gray-50/50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-teal-50 rounded-xl flex items-center justify-center text-teal-500 flex-shrink-0">
-                    <i className="ti ti-file-text text-lg"/>
+              <div key={r.id} className="border-b border-gray-50 last:border-none">
+                <div 
+                  onClick={() => toggleExpandReport(r.id)}
+                  className="px-5 py-3.5 flex items-center justify-between gap-3 hover:bg-gray-50/50 transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-teal-50 rounded-xl flex items-center justify-center text-teal-500 flex-shrink-0">
+                      <i className="ti ti-file-text text-lg"/>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-navy-600">{r.name}</p>
+                      <p className="text-xs text-gray-400">{r.lab} · {r.date} · {r.type} · {r.size}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-navy-600">{r.name}</p>
-                    <p className="text-xs text-gray-400">{r.lab} · {r.date} · {r.type} · {r.size}</p>
+                  <div className="flex items-center gap-2">
+                    {(r.abnormalities || r.suggestions) && (
+                      <Badge variant="red" className="flex items-center gap-1 shrink-0">
+                        <i className="ti ti-alert-triangle text-[10px]"/> AI Flagged
+                      </Badge>
+                    )}
+                    <Badge variant={r.verified ? 'green' : 'amber'}>{r.verified ? 'Verified' : 'Pending'}</Badge>
+                    <i className={`ti ${expandedReport === r.id ? 'ti-chevron-up' : 'ti-chevron-down'} text-gray-300 text-sm flex-shrink-0`}/>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant={r.verified ? 'green' : 'amber'}>{r.verified ? 'Verified' : 'Pending'}</Badge>
-                  <button className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-teal-500 cursor-pointer border-none bg-transparent transition-colors">
-                    <i className="ti ti-download text-base"/>
-                  </button>
-                </div>
+
+                {expandedReport === r.id && (r.abnormalities || r.suggestions) && (
+                  <div className="px-5 pb-4 pt-1 bg-navy-950/20 border-t border-gray-50/10 space-y-3 animate-fade-in text-left">
+                    {r.abnormalities && (
+                      <div>
+                        <p className="text-[10px] text-red-400 uppercase tracking-wider font-semibold">Detected Abnormalities</p>
+                        <p className="text-xs text-gray-300 mt-1 pl-2 border-l-2 border-red-500/40 leading-relaxed font-mono whitespace-pre-wrap">{r.abnormalities}</p>
+                      </div>
+                    )}
+                    {r.suggestions && (
+                      <div className="mt-2">
+                        <p className="text-[10px] text-teal-400 uppercase tracking-wider font-semibold">AI Actionable Recommendations</p>
+                        <p className="text-xs text-gray-300 mt-1 pl-2 border-l-2 border-teal-500/40 leading-relaxed whitespace-pre-wrap">{r.suggestions}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ))
           ) : (

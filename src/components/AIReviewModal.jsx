@@ -10,6 +10,8 @@ export function AIReviewModal({ isOpen, onClose, extractedData, onApprove, image
   const [meds, setMeds] = useState([]);
   const [diseases, setDiseases] = useState([]);
   const [surgeries, setSurgeries] = useState([]);
+  const [abnormalities, setAbnormalities] = useState('');
+  const [suggestions, setSuggestions] = useState('');
 
   // Initialize fields on open
   useEffect(() => {
@@ -17,6 +19,8 @@ export function AIReviewModal({ isOpen, onClose, extractedData, onApprove, image
       setMeds(extractedData.medications || []);
       setDiseases(extractedData.diseases || []);
       setSurgeries(extractedData.surgeries || []);
+      setAbnormalities(extractedData.abnormalities || '');
+      setSuggestions(extractedData.suggestions || '');
     }
   }, [extractedData]);
 
@@ -62,7 +66,9 @@ export function AIReviewModal({ isOpen, onClose, extractedData, onApprove, image
     onApprove({
       medications: finalMeds,
       diseases: finalDiseases,
-      surgeries: finalSurgeries
+      surgeries: finalSurgeries,
+      abnormalities: abnormalities,
+      suggestions: suggestions
     });
   };
 
@@ -106,7 +112,8 @@ export function AIReviewModal({ isOpen, onClose, extractedData, onApprove, image
             {[
               { id: 'medications', label: 'Medications', count: meds.length },
               { id: 'diseases', label: 'Conditions', count: diseases.length },
-              { id: 'surgeries', label: 'Surgeries', count: surgeries.length }
+              { id: 'surgeries', label: 'Surgeries', count: surgeries.length },
+              { id: 'abnormalities', label: 'Abnormalities & Recommendations', count: abnormalities || suggestions ? 'AI' : 0 }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -318,6 +325,33 @@ export function AIReviewModal({ isOpen, onClose, extractedData, onApprove, image
                 <button type="button" onClick={addSurgeryRow} className="w-full py-2 border-2 border-dashed border-gray-200 text-gray-400 rounded-xl hover:border-teal-400 hover:text-teal-600 flex items-center justify-center gap-1.5 text-xs font-semibold transition-colors bg-white cursor-pointer">
                   <i className="ti ti-plus text-sm"/> Add Surgery Row
                 </button>
+              </div>
+            )}
+
+            {activeTab === 'abnormalities' && (
+              <div className="space-y-4">
+                <div className="border border-gray-100 rounded-xl p-4 bg-gray-50/50 flex flex-col gap-3">
+                  <div>
+                    <label className="text-[10px] text-gray-400 uppercase font-semibold block mb-1">Detected Lab Abnormalities</label>
+                    <textarea 
+                      rows={4}
+                      className="w-full border border-gray-200 rounded p-2 text-xs text-navy-600 bg-white"
+                      value={abnormalities}
+                      onChange={(e) => setAbnormalities(e.target.value)}
+                      placeholder="e.g. Fasting Blood Glucose: 145 mg/dL (Reference: 70-100 mg/dL) - HIGH"
+                    />
+                  </div>
+                  <div className="mt-2">
+                    <label className="text-[10px] text-gray-400 uppercase font-semibold block mb-1">AI Actionable Recommendations</label>
+                    <textarea 
+                      rows={4}
+                      className="w-full border border-gray-200 rounded p-2 text-xs text-navy-600 bg-white"
+                      value={suggestions}
+                      onChange={(e) => setSuggestions(e.target.value)}
+                      placeholder="e.g. Reduce sugar intake, perform post-meal walks, and consult endocrinologist."
+                    />
+                  </div>
+                </div>
               </div>
             )}
           </div>

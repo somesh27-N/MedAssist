@@ -52,13 +52,17 @@ export async function analyzeMedicalImage(base64Data, mimeType) {
   const prompt = `Analyze the attached medical document image (prescription, lab report, discharge summary, or clinic invoice). Extract any:
 1. Medications (including name, dosage/dose, frequency, prescribing doctor, hospital/clinic, since/start date)
 2. Conditions/Diseases (including name, since/diagnosis year, status as 'active' or 'resolved', and notes)
-3. Surgeries (including name, date, type, hospital, doctor, city).
+3. Surgeries (including name, date, type, hospital, doctor, city)
+4. Abnormalities (especially metrics in lab reports that are higher or lower than the reference safety/normal limits)
+5. Clinical Suggestions (specific actionable advice on how to stabilize, lower, or normalize those abnormal values).
 
 Provide the result strictly as a raw valid JSON object (no markdown code blocks, no trailing backticks) matching this structure:
 {
   "medications": [ { "name": "...", "dose": "...", "frequency": "...", "doctor": "...", "hospital": "...", "since": "..." } ],
   "diseases": [ { "name": "...", "since": "...", "status": "active|resolved", "note": "..." } ],
-  "surgeries": [ { "name": "...", "date": "...", "type": "...", "hospital": "...", "doctor": "...", "city": "..." } ]
+  "surgeries": [ { "name": "...", "date": "...", "type": "...", "hospital": "...", "doctor": "...", "city": "..." } ],
+  "abnormalities": "Detailed list of abnormal values (e.g. 'Fasting Blood Glucose: 156 mg/dL (Reference: 70-100 mg/dL) - HIGH')",
+  "suggestions": "Actionable, clinically sound suggestions on how to lower/stabilize these abnormal metrics (e.g. 'Reduce refined sugars, perform 20 mins post-meal walks')"
 }`;
 
   const requestBody = {
@@ -106,7 +110,9 @@ Provide the result strictly as a raw valid JSON object (no markdown code blocks,
     return {
       medications: parsedData.medications || [],
       diseases: parsedData.diseases || [],
-      surgeries: parsedData.surgeries || []
+      surgeries: parsedData.surgeries || [],
+      abnormalities: parsedData.abnormalities || '',
+      suggestions: parsedData.suggestions || ''
     };
   } catch (err) {
     console.error('Failed to parse Gemini output:', err, jsonRes);
