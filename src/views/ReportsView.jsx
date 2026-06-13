@@ -126,7 +126,7 @@ export function ReportsView() {
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-navy-900/70 backdrop-blur-sm animate-fade-in text-white">
           <div className="w-12 h-12 border-4 rounded-full border-teal-400 border-t-transparent animate-spin mb-4" />
           <h3 className="font-display font-semibold text-lg">AI Document Analysis in Progress</h3>
-          <p className="text-xs text-white/60 mt-1 text-center max-w-xs">Extracting medications, diseases, and surgical history using Gemini...</p>
+          <p className="text-xs text-white/60 mt-1 text-center max-w-xs">Extracting medications, diseases, and surgical history...</p>
         </div>
       )}
 

@@ -54,7 +54,7 @@ export async function analyzeMedicalImage(base64Data, mimeType) {
 2. Conditions/Diseases (including name, since/diagnosis year, status as 'active' or 'resolved', and notes)
 3. Surgeries (including name, date, type, hospital, doctor, city)
 4. Abnormalities (especially metrics in lab reports that are higher or lower than the reference safety/normal limits)
-5. Clinical Suggestions (specific actionable advice on how to stabilize, lower, or normalize those abnormal values).
+5. Clinical Suggestions (very simple, clear, actionable, and easy-to-understand lifestyle/dietary recommendations on how to lower, stabilize, or normalize those abnormal values, avoiding complex medical jargon).
 
 Provide the result strictly as a raw valid JSON object (no markdown code blocks, no trailing backticks) matching this structure:
 {
@@ -62,7 +62,7 @@ Provide the result strictly as a raw valid JSON object (no markdown code blocks,
   "diseases": [ { "name": "...", "since": "...", "status": "active|resolved", "note": "..." } ],
   "surgeries": [ { "name": "...", "date": "...", "type": "...", "hospital": "...", "doctor": "...", "city": "..." } ],
   "abnormalities": "Detailed list of abnormal values (e.g. 'Fasting Blood Glucose: 156 mg/dL (Reference: 70-100 mg/dL) - HIGH')",
-  "suggestions": "Actionable, clinically sound suggestions on how to lower/stabilize these abnormal metrics (e.g. 'Reduce refined sugars, perform 20 mins post-meal walks')"
+  "suggestions": "Actionable, extremely simple, and easy-to-understand recommendations to help lower/stabilize these abnormal metrics (e.g. 'Drink plenty of water, reduce salt and sugar intake, walk 20 minutes after meals')"
 }`;
 
   const requestBody = {
