@@ -245,7 +245,7 @@ export function SummaryView() {
             </div>
             <div>
               <h3 className="font-display font-semibold text-base text-white flex items-center gap-2">
-                AI Clinical Advisor
+                Gemini Clinical Advisor
               </h3>
               <p className="text-xs text-navy-200">Generate a live, clinical health analysis based on your complete medical file.</p>
             </div>
