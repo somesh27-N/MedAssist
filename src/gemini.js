@@ -47,7 +47,7 @@ export async function analyzeMedicalImage(base64Data, mimeType) {
     };
   }
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
   
   const prompt = `Analyze the attached medical document image (prescription, lab report, discharge summary, or clinic invoice). Extract any:
 1. Medications (including name, dosage/dose, frequency, prescribing doctor, hospital/clinic, since/start date)
@@ -111,5 +111,77 @@ Provide the result strictly as a raw valid JSON object (no markdown code blocks,
   } catch (err) {
     console.error('Failed to parse Gemini output:', err, jsonRes);
     throw new Error('AI analysis succeeded but returned data did not conform to the expected format.');
+  }
+}
+
+/**
+ * Generates a comprehensive health summary and recommendations using Gemini based on live patient data.
+ * @param {object} patientData - The current patient profile and records.
+ * @returns {Promise<string>} Markdown formatted health summary.
+ */
+export async function generateHealthSummary(patientData) {
+  if (!isGeminiConfigured) {
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    return `### AI Clinical Summary (Simulated)
+* **General Status:** Patient **${patientData.name}** has **${patientData.currentDiseases?.length || 0} active conditions** and is taking **${patientData.medications?.length || 0} active medications**.
+* **Clinical Assessment:** High blood glucose (HbA1c: 7.1%) and Stage 1 Hypertension are currently managed. Good compliance reported with Metformin and Amlodipine.
+* **Recommendations:** Maintain a low-glycemic, low-sodium diet (<2g/day). Engage in 30 minutes of daily moderate exercise (e.g. brisk walking). Keep checking vitals regularly.`;
+  }
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+  
+  const prompt = `You are an expert AI clinical assistant. Generate a professional, highly concise health summary and recommendations based on the following patient data:
+Name: ${patientData.name}
+DOB: ${patientData.dob}
+Gender: ${patientData.gender}
+Blood Group: ${patientData.bloodGroup}
+
+Active Diseases:
+${(patientData.currentDiseases || []).map(d => `- ${d.name} (Since: ${d.since}, Note: ${d.note})`).join('\n')}
+
+All Historical Diseases:
+${(patientData.totalDiseases || []).map(d => `- ${d.name} (Since: ${d.since}, Status: ${d.status}, Note: ${d.note})`).join('\n')}
+
+Medications:
+${(patientData.medications || []).map(m => `- ${m.name} (${m.dose}, Frequency: ${m.frequency}, Prescribed by: ${m.doctor} at ${m.hospital}, Since: ${m.since})`).join('\n')}
+
+Surgeries:
+${(patientData.surgeries || []).map(s => `- ${s.name} (Date: ${s.date}, Type: ${s.type}, Hospital: ${s.hospital}, Surgeon: ${s.doctor})`).join('\n')}
+
+Format the output cleanly in Markdown, containing these bulleted/structured sections:
+1. **Clinical Health Overview** (A professional, concise summary of current health state)
+2. **Current Medication & Adherence Risks** (Brief analysis of prescriptions)
+3. **Lifestyle & Dietary Recommendations** (Specific to their diabetes/hypertension/surgeries if any)
+4. **Follow-up & Preventative Actions** (Next steps)`;
+
+  const requestBody = {
+    contents: [
+      {
+        parts: [
+          { text: prompt }
+        ]
+      }
+    ]
+  };
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(requestBody)
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Gemini API error: ${response.status} - ${errText}`);
+  }
+
+  const jsonRes = await response.json();
+  try {
+    return jsonRes.candidates[0].content.parts[0].text;
+  } catch (err) {
+    console.error('Failed to parse Gemini output:', err, jsonRes);
+    throw new Error('AI health summary generation failed to parse.');
   }
 }

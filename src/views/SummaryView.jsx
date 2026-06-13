@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { Card, CardHeader, Badge } from '../components/UI';
+import { generateHealthSummary } from '../gemini';
 
 const SYMPTOM_DB = [
   { keyword: 'headache', label: 'Headache', icon: 'ti-mood-sad', severity: 'mild',
@@ -121,6 +122,68 @@ export function SummaryView() {
   const [viewingHistory, setViewingHistory] = useState(null);
   const [analyzeAnim, setAnalyzeAnim] = useState(false);
 
+  // AI Summary States
+  const [aiSummary, setAiSummary] = useState('');
+  const [loadingSummary, setLoadingSummary] = useState(false);
+  const [summaryError, setSummaryError] = useState('');
+  
+  const handleGenerateSummary = async () => {
+    setLoadingSummary(true);
+    setSummaryError('');
+    try {
+      const summaryText = await generateHealthSummary(user);
+      setAiSummary(summaryText);
+    } catch (err) {
+      console.error(err);
+      setSummaryError('Failed to generate health summary. Please try again.');
+    } finally {
+      setLoadingSummary(false);
+    }
+  };
+
+  const getSortableTime = (dateStr) => {
+    if (!dateStr) return 0;
+    const parts = dateStr.split(' ');
+    let year = 0;
+    let month = 0;
+    
+    if (parts.length === 2) {
+      const months = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+      month = months[parts[0].toLowerCase().substring(0, 3)] || 0;
+      year = parseInt(parts[1]) || 0;
+    } else {
+      year = parseInt(parts[0]) || 0;
+    }
+    return year * 12 + month;
+  };
+
+  const timelineItems = [
+    ...(user.surgeries || []).map(s => ({
+      title: s.name,
+      sub: `${s.hospital || ''}${s.doctor ? ' · Dr. ' + s.doctor : ''} · Surgery (${s.type || 'Surgical procedure'})`,
+      date: s.date,
+      sortVal: getSortableTime(s.date)
+    })),
+    ...(user.totalDiseases || []).map(d => ({
+      title: `${d.name}`,
+      sub: `${d.note || 'Condition diagnosed'} · Status: ${d.status}`,
+      date: d.since,
+      sortVal: getSortableTime(d.since)
+    }))
+  ];
+  
+  // Sort descending (most recent first)
+  timelineItems.sort((a, b) => b.sortVal - a.sortVal);
+  
+  // Fallback if none exist
+  const finalTimeline = timelineItems.length > 0 ? timelineItems : [
+    { title: 'Cataract Extraction (R)', sub: 'Sankara Nethralaya, Chennai · Successful surgery', date: 'Mar 2024' },
+    { title: 'Hypertension Diagnosis', sub: 'Dr. R. Mehta · Started Amlodipine 5mg daily', date: 'Mar 2022' },
+    { title: 'Knee Arthroscopy (L)', sub: 'Fortis Gurgaon · Post sports injury repair', date: 'Nov 2020' },
+    { title: 'Type 2 Diabetes Mellitus', sub: 'Dr. S. Kapoor · Initiated Metformin therapy', date: 'Jan 2020' },
+    { title: 'Appendectomy', sub: 'AIIMS New Delhi · Laparoscopic procedure', date: 'Feb 2017' }
+  ];
+
   const handleSymptomInput = (val) => {
     setSymptomInput(val);
     if (val.trim().length > 0) {
@@ -173,6 +236,76 @@ export function SummaryView() {
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in text-left">
+      {/* Premium AI Health Advisor Card */}
+      <Card noPad className="overflow-hidden border border-teal-500/20 shadow-lg shadow-teal-500/5">
+        <div className="bg-gradient-to-r from-teal-900/40 to-navy-700/60 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100/10">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-teal-500/10 rounded-xl flex items-center justify-center text-teal-400 border border-teal-500/20 shadow-inner">
+              <i className="ti ti-sparkles text-xl animate-pulse"/>
+            </div>
+            <div>
+              <h3 className="font-display font-semibold text-base text-white flex items-center gap-2">
+                Gemini Clinical Advisor
+              </h3>
+              <p className="text-xs text-navy-200">Generate a live, clinical health analysis based on your complete medical file.</p>
+            </div>
+          </div>
+          <button
+            onClick={handleGenerateSummary}
+            disabled={loadingSummary}
+            className="px-5 py-2.5 bg-teal-500 hover:bg-teal-600 disabled:bg-teal-800 disabled:text-teal-400 text-white rounded-xl text-xs font-semibold transition-all shadow-md shadow-teal-500/20 cursor-pointer border-none flex items-center justify-center gap-1.5 shrink-0"
+          >
+            {loadingSummary ? (
+              <>
+                <div className="w-3.5 h-3.5 border-2 rounded-full border-white border-t-transparent animate-spin" />
+                Analyzing File...
+              </>
+            ) : (
+              <>
+                <i className="ti ti-sparkles text-sm"/>
+                Generate AI Summary
+              </>
+            )}
+          </button>
+        </div>
+
+        {summaryError && (
+          <div className="p-4 mx-5 my-4 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-xl flex items-center gap-2">
+            <i className="ti ti-alert-circle text-base" /> {summaryError}
+          </div>
+        )}
+
+        {aiSummary ? (
+          <div className="p-6 text-sm text-navy-600 leading-relaxed space-y-4 max-h-[300px] overflow-y-auto scrollbar-thin bg-navy-900/10">
+            <div className="prose prose-sm prose-invert max-w-none text-gray-200">
+              {aiSummary.split('\n').map((line, i) => {
+                if (line.startsWith('###')) {
+                  return <h4 key={i} className="font-semibold text-white mt-4 mb-2 text-sm">{line.replace('###', '').trim()}</h4>;
+                }
+                if (line.startsWith('**') || line.startsWith('1.') || line.startsWith('2.') || line.startsWith('3.') || line.startsWith('4.')) {
+                  return <p key={i} className="font-semibold text-teal-300 mt-3 text-xs tracking-wide uppercase">{line.replace(/\*\*/g, '').trim()}</p>;
+                }
+                if (line.startsWith('*') || line.startsWith('-')) {
+                  return (
+                    <div key={i} className="flex items-start gap-2 pl-3 py-1 text-xs">
+                      <span className="text-teal-400 mt-1">•</span>
+                      <span>{line.replace(/^[\*\-]\s*/, '').trim()}</span>
+                    </div>
+                  );
+                }
+                return line.trim() ? <p key={i} className="text-xs text-gray-300 mb-2 pl-3">{line}</p> : null;
+              })}
+            </div>
+          </div>
+        ) : (
+          !loadingSummary && (
+            <div className="p-8 text-center bg-navy-950/20">
+              <i className="ti ti-report-medical text-3xl text-gray-300 mb-2 opacity-50 block"/>
+              <p className="text-xs text-gray-400 font-medium">Click the button above to synthesize your health dashboard records into an AI summary report.</p>
+            </div>
+          )
+        )}
+      </Card>
       <div className="grid sm:grid-cols-3 gap-4">
         <div className="card p-5 bg-gradient-to-br from-teal-500 to-teal-600 text-white border-none">
           <p className="text-xs text-teal-100 uppercase tracking-wider font-medium">Health Score Estimate</p>
@@ -228,13 +361,7 @@ export function SummaryView() {
           <Card noPad>
             <CardHeader title="Medical Milestones Timeline" icon="ti-timeline"/>
             <div className="px-5 py-4 relative border-l-2 border-teal-100 ml-4 space-y-5">
-              {[
-                {title:'Cataract Extraction (R)',sub:'Sankara Nethralaya, Chennai &bull; Successful surgery',date:'Mar 2024'},
-                {title:'Hypertension Diagnosis',sub:'Dr. R. Mehta &bull; Started Amlodipine 5mg daily',date:'Mar 2022'},
-                {title:'Knee Arthroscopy (L)',sub:'Fortis Gurgaon &bull; Post sports injury repair',date:'Nov 2020'},
-                {title:'Type 2 Diabetes Mellitus',sub:'Dr. S. Kapoor &bull; Initiated Metformin therapy',date:'Jan 2020'},
-                {title:'Appendectomy',sub:'AIIMS New Delhi &bull; Laparoscopic procedure',date:'Feb 2017'}
-              ].map((item,i)=>(
+              {finalTimeline.map((item,i)=>(
                 <div key={i} className="relative pl-6">
                   <span className="absolute -left-[31px] top-1 w-3 h-3 rounded-full bg-teal-500 border-2 border-white ring-4 ring-teal-50"/>
                   <span className="text-[10px] text-teal-600 font-semibold">{item.date}</span>
