@@ -3,3 +3,4 @@ temp_debug.jsx
 *.log
 .tempmediaStorage/
 package-lock.json
+.env

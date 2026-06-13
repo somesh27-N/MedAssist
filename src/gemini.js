@@ -1,0 +1,115 @@
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
+
+export const isGeminiConfigured = !!GEMINI_API_KEY;
+
+if (!isGeminiConfigured) {
+  console.warn('Gemini API Key is missing in .env. Running image analysis pipeline in simulated/mock mode.');
+}
+
+/**
+ * Sends a base64 encoded image to the Gemini 1.5 Flash API to extract medical structure.
+ * @param {string} base64Data - Base64 encoded string of the image (without mime prefix).
+ * @param {string} mimeType - The mime type (e.g. image/jpeg, image/png).
+ * @returns {Promise<object>} Extracted structured medical records.
+ */
+export async function analyzeMedicalImage(base64Data, mimeType) {
+  if (!isGeminiConfigured) {
+    // Simulate API delay for mock response
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    return {
+      medications: [
+        {
+          name: 'Paracetamol',
+          dose: '650mg',
+          frequency: 'Three times daily',
+          doctor: 'Dr. Sandeep Sen',
+          hospital: 'Fortis Hospital',
+          since: 'Today'
+        },
+        {
+          name: 'Ibuprofen',
+          dose: '400mg',
+          frequency: 'As needed for pain',
+          doctor: 'Dr. Sandeep Sen',
+          hospital: 'Fortis Hospital',
+          since: 'Today'
+        }
+      ],
+      diseases: [
+        {
+          name: 'Viral Fever',
+          since: new Date().getFullYear().toString(),
+          status: 'active',
+          note: 'Moderate body temperature, prescribing hydration'
+        }
+      ],
+      surgeries: []
+    };
+  }
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+  
+  const prompt = `Analyze the attached medical document image (prescription, lab report, discharge summary, or clinic invoice). Extract any:
+1. Medications (including name, dosage/dose, frequency, prescribing doctor, hospital/clinic, since/start date)
+2. Conditions/Diseases (including name, since/diagnosis year, status as 'active' or 'resolved', and notes)
+3. Surgeries (including name, date, type, hospital, doctor, city).
+
+Provide the result strictly as a raw valid JSON object (no markdown code blocks, no trailing backticks) matching this structure:
+{
+  "medications": [ { "name": "...", "dose": "...", "frequency": "...", "doctor": "...", "hospital": "...", "since": "..." } ],
+  "diseases": [ { "name": "...", "since": "...", "status": "active|resolved", "note": "..." } ],
+  "surgeries": [ { "name": "...", "date": "...", "type": "...", "hospital": "...", "doctor": "...", "city": "..." } ]
+}`;
+
+  const requestBody = {
+    contents: [
+      {
+        parts: [
+          { text: prompt },
+          {
+            inlineData: {
+              mimeType: mimeType,
+              data: base64Data
+            }
+          }
+        ]
+      }
+    ]
+  };
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(requestBody)
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Gemini API error: ${response.status} - ${errText}`);
+  }
+
+  const jsonRes = await response.json();
+  
+  try {
+    let extractedText = jsonRes.candidates[0].content.parts[0].text;
+    
+    // Clean markdown wraps (e.g. ```json ... ```)
+    if (extractedText.includes('```')) {
+      extractedText = extractedText.replace(/```json/g, '').replace(/```/g, '').trim();
+    }
+    
+    const parsedData = JSON.parse(extractedText);
+    
+    // Ensure all arrays are defined
+    return {
+      medications: parsedData.medications || [],
+      diseases: parsedData.diseases || [],
+      surgeries: parsedData.surgeries || []
+    };
+  } catch (err) {
+    console.error('Failed to parse Gemini output:', err, jsonRes);
+    throw new Error('AI analysis succeeded but returned data did not conform to the expected format.');
+  }
+}
